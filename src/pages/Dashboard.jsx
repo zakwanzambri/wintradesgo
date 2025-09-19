@@ -212,7 +212,7 @@ const Dashboard = () => {
           transition={{ delay: 0.1 }}
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
         >
-          {portfolioStats.map((stat, index) => (
+          {portfolioStats.map((stat, _index) => (
             <div key={stat.label} className="card">
               <div className="flex items-center justify-between mb-4">
                 <div className={`p-2 rounded-lg ${stat.positive ? 'bg-green-100 dark:bg-green-900/30' : 'bg-red-100 dark:bg-red-900/30'}`}>

@@ -18,7 +18,7 @@ import {
 
 const Pricing = () => {
   const [billingCycle, setBillingCycle] = useState('monthly')
-  const [selectedPlan, setSelectedPlan] = useState('pro')
+  const [_selectedPlan, setSelectedPlan] = useState('pro')
 
   const plans = [
     {
@@ -411,7 +411,7 @@ const Pricing = () => {
                   </div>
                 </div>
                 <p className="text-gray-700 dark:text-gray-300 italic">
-                  "{testimonial.content}"
+                  &ldquo;{testimonial.content}&rdquo;
                 </p>
               </motion.div>
             ))}

@@ -279,7 +279,7 @@ const LandingPage = () => {
                   ))}
                 </div>
                 <p className="text-gray-600 dark:text-gray-400 italic">
-                  "{testimonial.content}"
+                  &ldquo;{testimonial.content}&rdquo;
                 </p>
               </motion.div>
             ))}
