@@ -123,8 +123,8 @@ class MarketDataAPI {
         
         foreach ($prices as $coin) {
             $stmt = $pdo->prepare("
-                INSERT INTO market_data (symbol, name, price, change_24h, market_cap, volume_24h, last_updated)
-                VALUES (?, ?, ?, ?, ?, ?, NOW())
+                INSERT INTO market_data (symbol, price, change_24h, market_cap, volume_24h, last_updated)
+                VALUES (?, ?, ?, ?, ?, NOW())
                 ON DUPLICATE KEY UPDATE
                     price = VALUES(price),
                     change_24h = VALUES(change_24h),
@@ -135,7 +135,6 @@ class MarketDataAPI {
             
             $stmt->execute([
                 $coin['symbol'],
-                $coin['name'],
                 $coin['price'],
                 $coin['change_24h'],
                 $coin['market_cap'],
