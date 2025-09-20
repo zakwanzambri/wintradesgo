@@ -1,0 +1,170 @@
+# Prometheus Alerting Rules for WinTrades Global Trading Platform
+
+groups:
+  - name: wintradesgo.critical
+    rules:
+      # Service Down Alerts
+      - alert: ServiceDown
+        expr: up{job=~"app-.*"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "WinTrades service is down in {{ $labels.region }}"
+          description: "Service {{ $labels.instance }} in region {{ $labels.region }} has been down for more than 1 minute."
+
+      # High Error Rate
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) > 0.05
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High error rate in {{ $labels.region }}"
+          description: "Error rate is {{ $value | humanizePercentage }} for region {{ $labels.region }}"
+
+      # Database Replication Lag
+      - alert: DatabaseReplicationLag
+        expr: mysql_slave_lag_seconds > 30
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Database replication lag in {{ $labels.region }}"
+          description: "Replication lag is {{ $value }} seconds in region {{ $labels.region }}"
+
+      # Trading Engine Down
+      - alert: TradingEngineDown
+        expr: trading_engine_status != 1
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Trading engine is down in {{ $labels.region }}"
+          description: "Trading engine has stopped responding in region {{ $labels.region }}"
+
+  - name: wintradesgo.warning
+    rules:
+      # High Response Time
+      - alert: HighResponseTime
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 1
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High response time in {{ $labels.region }}"
+          description: "95th percentile response time is {{ $value }}s in region {{ $labels.region }}"
+
+      # High Memory Usage
+      - alert: HighMemoryUsage
+        expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes > 0.85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage on {{ $labels.instance }}"
+          description: "Memory usage is {{ $value | humanizePercentage }} on {{ $labels.instance }}"
+
+      # High CPU Usage
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage on {{ $labels.instance }}"
+          description: "CPU usage is {{ $value }}% on {{ $labels.instance }}"
+
+      # Low Cache Hit Rate
+      - alert: LowCacheHitRate
+        expr: varnish_cache_hit_rate < 0.7
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low CDN cache hit rate"
+          description: "Cache hit rate is {{ $value | humanizePercentage }}"
+
+  - name: wintradesgo.trading
+    rules:
+      # Unusual Trading Volume
+      - alert: UnusualTradingVolume
+        expr: (sum(rate(trading_volume_usd_total[1h])) / sum(rate(trading_volume_usd_total[24h]))) > 2
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Unusual trading volume spike"
+          description: "Trading volume is {{ $value }}x higher than normal"
+
+      # Risk Threshold Exceeded
+      - alert: RiskThresholdExceeded
+        expr: portfolio_risk_percentage > 0.15
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Portfolio risk threshold exceeded"
+          description: "Portfolio risk is {{ $value | humanizePercentage }}, exceeding 15% threshold"
+
+      # ML Model Accuracy Drop
+      - alert: MLModelAccuracyDrop
+        expr: ml_model_accuracy < 0.6
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "ML model accuracy has dropped"
+          description: "Model accuracy is {{ $value | humanizePercentage }}, below 60% threshold"
+
+      # Failed Trade Executions
+      - alert: FailedTradeExecutions
+        expr: rate(trade_executions_failed_total[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High rate of failed trade executions"
+          description: "{{ $value }} failed trade executions per second in region {{ $labels.region }}"
+
+  - name: wintradesgo.infrastructure
+    rules:
+      # Redis Cluster Down
+      - alert: RedisClusterDown
+        expr: redis_cluster_nodes < 6
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis cluster has insufficient nodes"
+          description: "Redis cluster has only {{ $value }} nodes, minimum 6 required"
+
+      # Load Balancer Backend Down
+      - alert: LoadBalancerBackendDown
+        expr: haproxy_backend_servers_down > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Load balancer backend servers down"
+          description: "{{ $value }} backend servers are down in {{ $labels.backend }}"
+
+      # Disk Space Low
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_avail_bytes / node_filesystem_size_bytes) < 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low disk space on {{ $labels.instance }}"
+          description: "Disk space is {{ $value | humanizePercentage }} full on {{ $labels.instance }}"
+
+      # SSL Certificate Expiry
+      - alert: SSLCertificateExpiry
+        expr: ssl_certificate_expiry_days < 30
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "SSL certificate expiring soon"
+          description: "SSL certificate for {{ $labels.domain }} expires in {{ $value }} days"

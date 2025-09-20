@@ -1,0 +1,444 @@
+# WinTrades Multi-Region Deployment Configuration
+# Global infrastructure for high-availability trading system
+
+version: '3.8'
+
+networks:
+  wintradesgo_global:
+    driver: overlay
+    attachable: true
+  wintradesgo_internal:
+    driver: overlay
+    internal: true
+
+volumes:
+  mysql_master_data:
+  mysql_slave_data:
+  redis_cluster_data:
+  grafana_data:
+  prometheus_data:
+  certificates:
+
+services:
+  # Global Load Balancer (HAProxy)
+  global_loadbalancer:
+    image: haproxy:2.8-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"  # HAProxy stats
+    volumes:
+      - ./deployment/haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+      - ./deployment/ssl:/etc/ssl/certs:ro
+      - certificates:/etc/ssl/private:ro
+    networks:
+      - wintradesgo_global
+    deploy:
+      replicas: 2
+      placement:
+        constraints:
+          - node.role == manager
+      update_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+    environment:
+      - HAPROXY_STATS_USER=admin
+      - HAPROXY_STATS_PASSWORD=WinTrades2024!
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/stats"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Regional Application Servers
+  app_us_east:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - REGION=us-east-1
+      - DB_HOST=mysql_master
+      - DB_SLAVE_HOST=mysql_slave_us
+      - REDIS_HOST=redis_cluster
+      - APP_ENV=production
+      - PHP_MEMORY_LIMIT=512M
+      - PHP_MAX_EXECUTION_TIME=300
+    volumes:
+      - ./src:/var/www/html
+      - ./logs:/var/log/app
+    networks:
+      - wintradesgo_global
+      - wintradesgo_internal
+    deploy:
+      replicas: 3
+      placement:
+        constraints:
+          - node.labels.region == us-east
+      update_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: on-failure
+    depends_on:
+      - mysql_master
+      - redis_cluster
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  app_eu_west:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - REGION=eu-west-1
+      - DB_HOST=mysql_master
+      - DB_SLAVE_HOST=mysql_slave_eu
+      - REDIS_HOST=redis_cluster
+      - APP_ENV=production
+      - PHP_MEMORY_LIMIT=512M
+      - PHP_MAX_EXECUTION_TIME=300
+    volumes:
+      - ./src:/var/www/html
+      - ./logs:/var/log/app
+    networks:
+      - wintradesgo_global
+      - wintradesgo_internal
+    deploy:
+      replicas: 3
+      placement:
+        constraints:
+          - node.labels.region == eu-west
+      update_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: on-failure
+    depends_on:
+      - mysql_master
+      - redis_cluster
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  app_asia_pacific:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - REGION=asia-pacific-1
+      - DB_HOST=mysql_master
+      - DB_SLAVE_HOST=mysql_slave_ap
+      - REDIS_HOST=redis_cluster
+      - APP_ENV=production
+      - PHP_MEMORY_LIMIT=512M
+      - PHP_MAX_EXECUTION_TIME=300
+    volumes:
+      - ./src:/var/www/html
+      - ./logs:/var/log/app
+    networks:
+      - wintradesgo_global
+      - wintradesgo_internal
+    deploy:
+      replicas: 3
+      placement:
+        constraints:
+          - node.labels.region == asia-pacific
+      update_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: on-failure
+    depends_on:
+      - mysql_master
+      - redis_cluster
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # MySQL Master-Slave Replication Setup
+  mysql_master:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: WinTrades2024!
+      MYSQL_DATABASE: wintradesgo
+      MYSQL_USER: wintradesgo
+      MYSQL_PASSWORD: WinTrades2024!
+    volumes:
+      - mysql_master_data:/var/lib/mysql
+      - ./deployment/mysql/master.cnf:/etc/mysql/conf.d/master.cnf:ro
+      - ./deployment/mysql/init-master.sql:/docker-entrypoint-initdb.d/init-master.sql:ro
+    networks:
+      - wintradesgo_internal
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.database == master
+      restart_policy:
+        condition: on-failure
+    ports:
+      - "3306:3306"
+    command: --server-id=1 --log-bin=mysql-bin --binlog-format=ROW
+
+  mysql_slave_us:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: WinTrades2024!
+      MYSQL_DATABASE: wintradesgo
+      MYSQL_USER: wintradesgo
+      MYSQL_PASSWORD: WinTrades2024!
+    volumes:
+      - mysql_slave_data:/var/lib/mysql
+      - ./deployment/mysql/slave.cnf:/etc/mysql/conf.d/slave.cnf:ro
+    networks:
+      - wintradesgo_internal
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.region == us-east
+      restart_policy:
+        condition: on-failure
+    depends_on:
+      - mysql_master
+    command: --server-id=2 --relay-log=relay-bin --read-only=1
+
+  mysql_slave_eu:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: WinTrades2024!
+      MYSQL_DATABASE: wintradesgo
+      MYSQL_USER: wintradesgo
+      MYSQL_PASSWORD: WinTrades2024!
+    volumes:
+      - mysql_slave_data:/var/lib/mysql
+      - ./deployment/mysql/slave.cnf:/etc/mysql/conf.d/slave.cnf:ro
+    networks:
+      - wintradesgo_internal
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.region == eu-west
+      restart_policy:
+        condition: on-failure
+    depends_on:
+      - mysql_master
+    command: --server-id=3 --relay-log=relay-bin --read-only=1
+
+  mysql_slave_ap:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: WinTrades2024!
+      MYSQL_DATABASE: wintradesgo
+      MYSQL_USER: wintradesgo
+      MYSQL_PASSWORD: WinTrades2024!
+    volumes:
+      - mysql_slave_data:/var/lib/mysql
+      - ./deployment/mysql/slave.cnf:/etc/mysql/conf.d/slave.cnf:ro
+    networks:
+      - wintradesgo_internal
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.region == asia-pacific
+      restart_policy:
+        condition: on-failure
+    depends_on:
+      - mysql_master
+    command: --server-id=4 --relay-log=relay-bin --read-only=1
+
+  # Redis Cluster for Distributed Caching
+  redis_cluster:
+    image: redis:7-alpine
+    networks:
+      - wintradesgo_internal
+    volumes:
+      - redis_cluster_data:/data
+      - ./deployment/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    deploy:
+      replicas: 6
+      placement:
+        max_replicas_per_node: 2
+      restart_policy:
+        condition: on-failure
+    command: redis-server /usr/local/etc/redis/redis.conf --cluster-enabled yes --cluster-config-file nodes.conf --cluster-node-timeout 5000 --appendonly yes
+
+  # Global CDN Cache (Varnish)
+  cdn_cache:
+    image: varnish:7.1
+    volumes:
+      - ./deployment/varnish/default.vcl:/etc/varnish/default.vcl:ro
+    networks:
+      - wintradesgo_global
+    deploy:
+      replicas: 3
+      placement:
+        max_replicas_per_node: 1
+      restart_policy:
+        condition: on-failure
+    environment:
+      - VARNISH_SIZE=256M
+    ports:
+      - "6081:80"
+
+  # Monitoring Stack
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - prometheus_data:/prometheus
+      - ./deployment/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    networks:
+      - wintradesgo_internal
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+    ports:
+      - "9090:9090"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+
+  grafana:
+    image: grafana/grafana:latest
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./deployment/grafana/provisioning:/etc/grafana/provisioning:ro
+    networks:
+      - wintradesgo_internal
+      - wintradesgo_global
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=WinTrades2024!
+      - GF_USERS_ALLOW_SIGN_UP=false
+    ports:
+      - "3000:3000"
+
+  # Application Performance Monitoring
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    networks:
+      - wintradesgo_internal
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+    environment:
+      - COLLECTOR_ZIPKIN_HOST_PORT=:9411
+    ports:
+      - "16686:16686"
+      - "14268:14268"
+
+  # Log Aggregation
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.10.0
+    environment:
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - xpack.security.enabled=false
+    volumes:
+      - ./deployment/elasticsearch/data:/usr/share/elasticsearch/data
+    networks:
+      - wintradesgo_internal
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.10.0
+    volumes:
+      - ./deployment/logstash/pipeline:/usr/share/logstash/pipeline:ro
+      - ./logs:/var/log/app:ro
+    networks:
+      - wintradesgo_internal
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+    depends_on:
+      - elasticsearch
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.10.0
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    networks:
+      - wintradesgo_internal
+      - wintradesgo_global
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
+
+  # Health Check Service
+  health_check:
+    image: alpine:latest
+    networks:
+      - wintradesgo_global
+      - wintradesgo_internal
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+    command: |
+      sh -c "
+        apk add --no-cache curl &&
+        while true; do
+          curl -f http://app_us_east/health || echo 'US East health check failed'
+          curl -f http://app_eu_west/health || echo 'EU West health check failed'
+          curl -f http://app_asia_pacific/health || echo 'Asia Pacific health check failed'
+          sleep 60
+        done
+      "
+
+# Global Configuration for Docker Swarm
+configs:
+  haproxy_config:
+    file: ./deployment/haproxy/haproxy.cfg
+  
+  mysql_master_config:
+    file: ./deployment/mysql/master.cnf
+  
+  mysql_slave_config:
+    file: ./deployment/mysql/slave.cnf
+
+secrets:
+  mysql_root_password:
+    external: true
+  
+  ssl_certificate:
+    external: true
+  
+  ssl_private_key:
+    external: true

@@ -1,0 +1,78 @@
+# MySQL Master Configuration for Multi-Region Deployment
+# WinTrades Global Trading Platform
+
+[mysqld]
+# Server identification
+server-id = 1
+log-bin = mysql-bin
+binlog-format = ROW
+binlog-do-db = wintradesgo
+
+# Replication settings
+sync_binlog = 1
+binlog_cache_size = 1M
+max_binlog_cache_size = 256M
+max_binlog_size = 256M
+expire_logs_days = 7
+
+# Performance optimizations
+innodb_buffer_pool_size = 1G
+innodb_log_file_size = 256M
+innodb_log_buffer_size = 64M
+innodb_flush_log_at_trx_commit = 1
+innodb_flush_method = O_DIRECT
+
+# Connection settings
+max_connections = 500
+max_connect_errors = 10000
+connect_timeout = 60
+wait_timeout = 28800
+interactive_timeout = 28800
+
+# Query cache
+query_cache_type = 1
+query_cache_size = 256M
+query_cache_limit = 2M
+
+# Table cache
+table_open_cache = 2048
+table_definition_cache = 1024
+
+# Thread settings
+thread_cache_size = 64
+thread_stack = 256K
+
+# MyISAM settings
+key_buffer_size = 256M
+sort_buffer_size = 4M
+read_buffer_size = 2M
+read_rnd_buffer_size = 8M
+
+# Networking
+max_allowed_packet = 64M
+bind-address = 0.0.0.0
+
+# Logging
+log-error = /var/log/mysql/error.log
+slow_query_log = 1
+slow_query_log_file = /var/log/mysql/slow.log
+long_query_time = 2
+
+# Character set
+character-set-server = utf8mb4
+collation-server = utf8mb4_unicode_ci
+
+# Time zone
+default-time-zone = '+00:00'
+
+# Security
+local-infile = 0
+
+# GTID for easier failover
+gtid_mode = ON
+enforce_gtid_consistency = ON
+
+# Semi-synchronous replication for data consistency
+plugin-load = "rpl_semi_sync_master=semisync_master.so"
+rpl_semi_sync_master_enabled = 1
+rpl_semi_sync_master_timeout = 1000

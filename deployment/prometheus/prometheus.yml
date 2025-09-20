@@ -1,0 +1,192 @@
+# Prometheus Configuration for Multi-Region Monitoring
+# WinTrades Global Trading Platform
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'wintradesgo-global'
+    environment: 'production'
+
+rule_files:
+  - "rules/*.yml"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+
+scrape_configs:
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Application servers - US East
+  - job_name: 'app-us-east'
+    static_configs:
+      - targets: 
+          - 'app_us_east:9100'
+          - 'app_us_east:80'
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: region
+        replacement: 'us-east-1'
+
+  # Application servers - EU West
+  - job_name: 'app-eu-west'
+    static_configs:
+      - targets: 
+          - 'app_eu_west:9100'
+          - 'app_eu_west:80'
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: region
+        replacement: 'eu-west-1'
+
+  # Application servers - Asia Pacific
+  - job_name: 'app-asia-pacific'
+    static_configs:
+      - targets: 
+          - 'app_asia_pacific:9100'
+          - 'app_asia_pacific:80'
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: region
+        replacement: 'asia-pacific-1'
+
+  # MySQL Master
+  - job_name: 'mysql-master'
+    static_configs:
+      - targets: ['mysql_master:9104']
+    scrape_interval: 30s
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: role
+        replacement: 'master'
+
+  # MySQL Slaves
+  - job_name: 'mysql-slaves'
+    static_configs:
+      - targets: 
+          - 'mysql_slave_us:9104'
+          - 'mysql_slave_eu:9104'
+          - 'mysql_slave_ap:9104'
+    scrape_interval: 30s
+    relabel_configs:
+      - source_labels: [__address__]
+        regex: 'mysql_slave_(.+):9104'
+        target_label: region
+        replacement: '${1}'
+      - source_labels: [__address__]
+        target_label: role
+        replacement: 'slave'
+
+  # Redis Cluster
+  - job_name: 'redis-cluster'
+    static_configs:
+      - targets: ['redis_cluster:9121']
+    scrape_interval: 15s
+
+  # HAProxy Load Balancer
+  - job_name: 'haproxy'
+    static_configs:
+      - targets: ['global_loadbalancer:8080']
+    metrics_path: '/stats;csv'
+    scrape_interval: 15s
+
+  # Varnish CDN
+  - job_name: 'varnish'
+    static_configs:
+      - targets: ['cdn_cache:9131']
+    scrape_interval: 15s
+
+  # Node Exporter (System metrics)
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets:
+          - 'app_us_east:9100'
+          - 'app_eu_west:9100'
+          - 'app_asia_pacific:9100'
+          - 'mysql_master:9100'
+          - 'mysql_slave_us:9100'
+          - 'mysql_slave_eu:9100'
+          - 'mysql_slave_ap:9100'
+    scrape_interval: 15s
+
+  # Custom Application Metrics
+  - job_name: 'trading-metrics'
+    static_configs:
+      - targets:
+          - 'app_us_east:80'
+          - 'app_eu_west:80'
+          - 'app_asia_pacific:80'
+    metrics_path: '/api/metrics'
+    scrape_interval: 5s
+    params:
+      format: ['prometheus']
+
+  # Health Checks
+  - job_name: 'health-checks'
+    static_configs:
+      - targets:
+          - 'app_us_east:80'
+          - 'app_eu_west:80'
+          - 'app_asia_pacific:80'
+    metrics_path: '/health'
+    scrape_interval: 30s
+
+  # Trading Engine Metrics
+  - job_name: 'trading-engine'
+    static_configs:
+      - targets:
+          - 'app_us_east:80'
+          - 'app_eu_west:80'
+          - 'app_asia_pacific:80'
+    metrics_path: '/api/trading/metrics'
+    scrape_interval: 10s
+
+  # Risk Management Metrics
+  - job_name: 'risk-management'
+    static_configs:
+      - targets:
+          - 'app_us_east:80'
+          - 'app_eu_west:80'
+          - 'app_asia_pacific:80'
+    metrics_path: '/api/risk/metrics'
+    scrape_interval: 15s
+
+  # ML Model Performance
+  - job_name: 'ml-models'
+    static_configs:
+      - targets:
+          - 'app_us_east:80'
+          - 'app_eu_west:80'
+          - 'app_asia_pacific:80'
+    metrics_path: '/api/ml/metrics'
+    scrape_interval: 30s
+
+  # Elasticsearch (if used for logging)
+  - job_name: 'elasticsearch'
+    static_configs:
+      - targets: ['elasticsearch:9200']
+    metrics_path: '/_prometheus/metrics'
+    scrape_interval: 30s
+
+# Remote write configuration for long-term storage
+remote_write:
+  - url: "https://prometheus-remote-write.example.com/api/v1/write"
+    basic_auth:
+      username: "wintradesgo"
+      password: "WinTrades2024!"
+    queue_config:
+      max_samples_per_send: 1000
+      max_shards: 10
+      capacity: 10000
