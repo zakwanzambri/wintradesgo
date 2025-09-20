@@ -24,6 +24,14 @@ class AISignalGenerator {
     }
     
     /**
+     * Get database instance
+     * @return Database Database instance
+     */
+    public function getDatabase() {
+        return $this->database;
+    }
+    
+    /**
      * Generate comprehensive AI signals for all tracked cryptocurrencies
      * @return array Results of signal generation
      */

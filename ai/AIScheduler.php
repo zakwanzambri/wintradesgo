@@ -5,15 +5,18 @@
  */
 
 require_once __DIR__ . '/AISignalGenerator.php';
+require_once __DIR__ . '/SmartAlertSystem.php';
 
 class AIScheduler {
     
     private $aiGenerator;
+    private $alertSystem;
     private $logFile;
     private $isRunning = false;
     
     public function __construct() {
         $this->aiGenerator = new AISignalGenerator();
+        $this->alertSystem = new SmartAlertSystem($this->aiGenerator->getDatabase());
         $this->logFile = __DIR__ . '/logs/ai_scheduler.log';
         
         // Create logs directory if it doesn't exist
@@ -45,6 +48,12 @@ class AIScheduler {
                 $executionTime = round($endTime - $startTime, 2);
                 
                 $this->log("✅ Generated " . count($signals) . " signals in {$executionTime}s");
+                
+                // Check for high-confidence signals and send alerts
+                $alertResults = $this->alertSystem->checkAndSendAlerts();
+                if ($alertResults['success'] && $alertResults['alerts_sent'] > 0) {
+                    $this->log("🚨 Sent {$alertResults['alerts_sent']} high-confidence alerts");
+                }
                 
                 // Log signal details
                 foreach ($signals as $signal) {
