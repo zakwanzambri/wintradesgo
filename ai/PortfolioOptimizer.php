@@ -58,7 +58,9 @@ class PortfolioOptimizer {
             // 7. Calculate optimization metrics
             $optimizationMetrics = $this->calculateOptimizationMetrics($finalPositions, $expectedReturns, $covarianceMatrix);
             
-            $this->log("✅ Portfolio optimization complete - Expected Sharpe: " . round($optimizationMetrics['sharpe_ratio'], 3));
+            // Safe access to sharpe_ratio with fallback
+            $sharpeRatio = isset($optimizationMetrics['sharpe_ratio']) ? $optimizationMetrics['sharpe_ratio'] : 0;
+            $this->log("✅ Portfolio optimization complete - Expected Sharpe: " . round($sharpeRatio, 3));
             
             return [
                 'positions' => $finalPositions,
@@ -207,6 +209,11 @@ class PortfolioOptimizer {
         $symbols = array_keys($expectedReturns);
         $n = count($symbols);
         
+        // Handle edge case of no symbols
+        if ($n == 0) {
+            return [];
+        }
+        
         // Initialize equal weights
         $weights = array_fill_keys($symbols, 1.0 / $n);
         
@@ -215,6 +222,11 @@ class PortfolioOptimizer {
             $portfolioReturn = $this->calculatePortfolioReturn($weights, $expectedReturns);
             $portfolioVariance = $this->calculatePortfolioVariance($weights, $covarianceMatrix);
             $portfolioVolatility = sqrt($portfolioVariance);
+            
+            // Avoid division by zero
+            if ($portfolioVolatility == 0) {
+                $portfolioVolatility = 0.0001; // Small positive number
+            }
             
             $currentSharpe = ($portfolioReturn - $this->config['risk_free_rate']) / $portfolioVolatility;
             
@@ -230,8 +242,15 @@ class PortfolioOptimizer {
         
         // Normalize weights to sum to 1
         $totalWeight = array_sum($weights);
-        foreach ($weights as $symbol => $weight) {
-            $weights[$symbol] = $weight / $totalWeight;
+        
+        // Avoid division by zero in normalization
+        if ($totalWeight == 0) {
+            // Reset to equal weights if all weights are zero
+            $weights = array_fill_keys($symbols, 1.0 / $n);
+        } else {
+            foreach ($weights as $symbol => $weight) {
+                $weights[$symbol] = $weight / $totalWeight;
+            }
         }
         
         return $weights;
@@ -244,17 +263,32 @@ class PortfolioOptimizer {
         $symbols = array_keys($expectedReturns);
         $n = count($symbols);
         
+        // Handle edge case of no symbols
+        if ($n == 0) {
+            return [];
+        }
+        
         // Equal risk contribution approach
         $weights = [];
         foreach ($symbols as $symbol) {
             $assetVariance = $covarianceMatrix[$symbol][$symbol];
+            // Avoid division by zero variance
+            if ($assetVariance == 0) {
+                $assetVariance = 0.0001; // Small positive variance
+            }
             $weights[$symbol] = 1.0 / $assetVariance;
         }
         
         // Normalize weights
         $totalWeight = array_sum($weights);
-        foreach ($weights as $symbol => $weight) {
-            $weights[$symbol] = $weight / $totalWeight;
+        // Avoid division by zero in normalization
+        if ($totalWeight == 0) {
+            // Reset to equal weights if all weights are zero
+            $weights = array_fill_keys($symbols, 1.0 / $n);
+        } else {
+            foreach ($weights as $symbol => $weight) {
+                $weights[$symbol] = $weight / $totalWeight;
+            }
         }
         
         return $weights;
@@ -341,19 +375,35 @@ class PortfolioOptimizer {
      */
     private function calculateOptimizationMetrics($positions, $expectedReturns, $covarianceMatrix) {
         if (empty($positions)) {
-            return ['error' => 'No positions to analyze'];
+            return [
+                'expected_return' => '0.00%',
+                'expected_volatility' => '0.00%',
+                'sharpe_ratio' => 0,
+                'concentration_risk' => 0,
+                'correlation_score' => 0,
+                'error' => 'No positions to analyze'
+            ];
         }
         
         // Create weight array
         $weights = [];
         foreach ($positions as $position) {
-            $weights[$position['symbol']] = $position['target_weight'];
+            // Safe access to position symbol
+            if (isset($position['symbol'])) {
+                $weights[$position['symbol']] = $position['target_weight'] ?? 0;
+            }
         }
         
         // Calculate portfolio metrics
         $portfolioReturn = $this->calculatePortfolioReturn($weights, $expectedReturns);
         $portfolioVariance = $this->calculatePortfolioVariance($weights, $covarianceMatrix);
         $portfolioVolatility = sqrt($portfolioVariance);
+        
+        // Avoid division by zero in Sharpe ratio
+        if ($portfolioVolatility == 0) {
+            $portfolioVolatility = 0.0001;
+        }
+        
         $sharpeRatio = ($portfolioReturn - $this->config['risk_free_rate']) / $portfolioVolatility;
         
         // Calculate diversification metrics

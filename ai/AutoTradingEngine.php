@@ -148,6 +148,12 @@ class AutoTradingEngine {
         
         foreach ($optimizedPositions as $position) {
             try {
+                // Validate position structure
+                if (!isset($position['symbol']) || empty($position['symbol'])) {
+                    $this->log("⚠️ Skipping position with missing symbol: " . json_encode($position));
+                    continue;
+                }
+                
                 // Check if we already have a position in this symbol
                 $existingPosition = $this->getExistingPosition($position['symbol']);
                 
