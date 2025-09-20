@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WinTrades Mobile</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .mobile-container {
+            max-width: 428px;
+            margin: 0 auto;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        
+        .feature-card {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.25);
+        }
+        
+        .feature-card:active {
+            transform: translateY(-2px);
+        }
+        
+        .notification-dot {
+            position: absolute;
+            top: -2px;
+            right: -2px;
+            width: 8px;
+            height: 8px;
+            background: #ef4444;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        .stats-gradient {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+        
+        .portfolio-gradient {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        }
+        
+        .signals-gradient {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        }
+        
+        .risk-gradient {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        }
+        
+        .settings-gradient {
+            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+        }
+        
+        .notifications-gradient {
+            background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+        }
+        
+        .floating-action {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+            transition: all 0.3s ease;
+            z-index: 50;
+        }
+        
+        .floating-action:hover {
+            transform: scale(1.1);
+            box-shadow: 0 12px 35px rgba(102, 126, 234, 0.6);
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-online {
+            background: #10b981;
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+        }
+        
+        .status-warning {
+            background: #f59e0b;
+            box-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
+        }
+        
+        .welcome-animation {
+            animation: slideInUp 0.8s ease-out;
+        }
+        
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .feature-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+        
+        .feature-large {
+            grid-column: span 2;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div class="mobile-container">
+        
+        <!-- Header -->
+        <div class="glass-card rounded-none rounded-b-xl p-4 sticky top-0 z-40">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <div class="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center mr-3">
+                        <i class="fas fa-chart-line text-white text-lg"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-lg font-bold text-gray-800">WinTrades</h1>
+                        <div class="text-xs text-gray-600">Mobile Trading Platform</div>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <div class="relative">
+                        <button onclick="toggleNotifications()" class="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors" title="Notifications">
+                            <i class="fas fa-bell text-gray-600"></i>
+                        </button>
+                        <div class="notification-dot"></div>
+                    </div>
+                    <button onclick="refreshData()" class="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors" title="Refresh">
+                        <i class="fas fa-sync-alt text-gray-600"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Content -->
+        <div class="p-4 pb-24 space-y-6">
+            
+            <!-- Welcome Section -->
+            <div class="glass-card p-6 welcome-animation">
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-gray-800 mb-2">Welcome Back!</div>
+                    <div class="text-gray-600 mb-4">Your trading dashboard is ready</div>
+                    
+                    <!-- Status Indicators -->
+                    <div class="flex items-center justify-center space-x-4 text-sm">
+                        <div class="flex items-center">
+                            <span class="status-indicator status-online"></span>
+                            <span class="text-gray-600">Market Open</span>
+                        </div>
+                        <div class="flex items-center">
+                            <span class="status-indicator status-online"></span>
+                            <span class="text-gray-600">ML Active</span>
+                        </div>
+                        <div class="flex items-center">
+                            <span class="status-indicator status-warning"></span>
+                            <span class="text-gray-600">High Risk</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Stats -->
+            <div class="grid grid-cols-2 gap-4">
+                <div class="stats-gradient glass-card p-4 text-white rounded-xl">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <div class="text-2xl font-bold">+12.8%</div>
+                            <div class="text-sm opacity-90">Today's P&L</div>
+                        </div>
+                        <i class="fas fa-trending-up text-2xl opacity-80"></i>
+                    </div>
+                </div>
+                
+                <div class="portfolio-gradient glass-card p-4 text-white rounded-xl">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <div class="text-2xl font-bold">$87.2K</div>
+                            <div class="text-sm opacity-90">Portfolio</div>
+                        </div>
+                        <i class="fas fa-wallet text-2xl opacity-80"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Features -->
+            <div class="feature-grid">
+                
+                <!-- Dashboard -->
+                <div class="feature-card glass-card p-6 rounded-xl" onclick="navigateTo('mobile-dashboard.html')">
+                    <div class="signals-gradient text-white rounded-lg p-4 mb-4">
+                        <i class="fas fa-chart-area text-2xl mb-2"></i>
+                        <div class="text-lg font-semibold">Dashboard</div>
+                    </div>
+                    <div class="text-sm text-gray-600">Real-time signals and portfolio overview</div>
+                    <div class="flex items-center mt-2">
+                        <span class="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded-full">3 New Signals</span>
+                    </div>
+                </div>
+
+                <!-- Risk Assessment -->
+                <div class="feature-card glass-card p-6 rounded-xl" onclick="navigateTo('mobile-risk.html')">
+                    <div class="risk-gradient text-white rounded-lg p-4 mb-4">
+                        <i class="fas fa-shield-alt text-2xl mb-2"></i>
+                        <div class="text-lg font-semibold">Risk Analysis</div>
+                    </div>
+                    <div class="text-sm text-gray-600">Portfolio risk assessment and management</div>
+                    <div class="flex items-center mt-2">
+                        <span class="text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full">High Risk Alert</span>
+                    </div>
+                </div>
+
+                <!-- Settings (Full Width) -->
+                <div class="feature-card glass-card p-6 rounded-xl feature-large" onclick="navigateTo('mobile-settings.html')">
+                    <div class="flex items-center">
+                        <div class="settings-gradient text-white rounded-lg p-4 mr-4">
+                            <i class="fas fa-cog text-2xl"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="text-lg font-semibold text-gray-800">ML Settings & Preferences</div>
+                            <div class="text-sm text-gray-600">Configure models, notifications, and risk parameters</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Trading Tools -->
+                <div class="feature-card glass-card p-6 rounded-xl" onclick="showComingSoon('Trading Tools')">
+                    <div class="portfolio-gradient text-white rounded-lg p-4 mb-4">
+                        <i class="fas fa-tools text-2xl mb-2"></i>
+                        <div class="text-lg font-semibold">Trading Tools</div>
+                    </div>
+                    <div class="text-sm text-gray-600">Advanced trading utilities and calculators</div>
+                    <div class="flex items-center mt-2">
+                        <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">Coming Soon</span>
+                    </div>
+                </div>
+
+                <!-- Analytics -->
+                <div class="feature-card glass-card p-6 rounded-xl" onclick="showComingSoon('Analytics')">
+                    <div class="notifications-gradient text-white rounded-lg p-4 mb-4">
+                        <i class="fas fa-chart-pie text-2xl mb-2"></i>
+                        <div class="text-lg font-semibold">Analytics</div>
+                    </div>
+                    <div class="text-sm text-gray-600">Performance analytics and insights</div>
+                    <div class="flex items-center mt-2">
+                        <span class="text-xs bg-cyan-100 text-cyan-800 px-2 py-1 rounded-full">Beta</span>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="glass-card p-4 rounded-xl">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">Recent Activity</h3>
+                
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                        <div class="flex items-center">
+                            <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+                                <i class="fas fa-arrow-up text-green-600 text-sm"></i>
+                            </div>
+                            <div>
+                                <div class="text-sm font-medium text-gray-800">BTC Signal Executed</div>
+                                <div class="text-xs text-gray-600">Confidence: 92% • 5 min ago</div>
+                            </div>
+                        </div>
+                        <div class="text-sm font-semibold text-green-600">+$1,240</div>
+                    </div>
+                    
+                    <div class="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
+                        <div class="flex items-center">
+                            <div class="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center mr-3">
+                                <i class="fas fa-exclamation-triangle text-orange-600 text-sm"></i>
+                            </div>
+                            <div>
+                                <div class="text-sm font-medium text-gray-800">Risk Alert Triggered</div>
+                                <div class="text-xs text-gray-600">Portfolio risk >65% • 12 min ago</div>
+                            </div>
+                        </div>
+                        <div class="text-sm font-semibold text-orange-600">Review</div>
+                    </div>
+                    
+                    <div class="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                        <div class="flex items-center">
+                            <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                                <i class="fas fa-bell text-blue-600 text-sm"></i>
+                            </div>
+                            <div>
+                                <div class="text-sm font-medium text-gray-800">Push Notifications Enabled</div>
+                                <div class="text-xs text-gray-600">ML signals >90% • 1 hour ago</div>
+                            </div>
+                        </div>
+                        <div class="text-sm font-semibold text-blue-600">Active</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Market Status -->
+            <div class="glass-card p-4 rounded-xl">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">Market Overview</h3>
+                
+                <div class="grid grid-cols-3 gap-4 text-center">
+                    <div>
+                        <div class="text-lg font-bold text-green-600">24.8K</div>
+                        <div class="text-xs text-gray-600">Active Traders</div>
+                    </div>
+                    <div>
+                        <div class="text-lg font-bold text-blue-600">$2.4B</div>
+                        <div class="text-xs text-gray-600">Volume 24h</div>
+                    </div>
+                    <div>
+                        <div class="text-lg font-bold text-orange-600">89.2%</div>
+                        <div class="text-xs text-gray-600">ML Accuracy</div>
+                    </div>
+                </div>
+                
+                <div class="mt-4 p-3 bg-blue-50 rounded-lg">
+                    <div class="flex items-center justify-between">
+                        <div class="text-sm font-medium text-blue-800">BTC/USD</div>
+                        <div class="text-sm font-bold text-blue-600">$67,240 (+2.4%)</div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Floating Action Button -->
+        <button class="floating-action" onclick="quickAction()" title="Quick Trade">
+            <i class="fas fa-bolt text-white text-xl"></i>
+        </button>
+
+    </div>
+
+    <!-- Notification Panel (Hidden by default) -->
+    <div id="notification-panel" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden" onclick="toggleNotifications()">
+        <div class="absolute bottom-0 left-0 right-0 max-w-md mx-auto bg-white rounded-t-2xl p-4" onclick="event.stopPropagation()">
+            <div class="w-12 h-1 bg-gray-300 rounded-full mx-auto mb-4"></div>
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">Notifications</h3>
+            
+            <div class="space-y-3 max-h-64 overflow-y-auto">
+                <div class="flex items-start p-3 bg-green-50 rounded-lg">
+                    <i class="fas fa-check-circle text-green-600 mt-1 mr-3"></i>
+                    <div class="flex-1">
+                        <div class="text-sm font-medium text-gray-800">ETH Signal Triggered</div>
+                        <div class="text-xs text-gray-600">Confidence: 94% • Buy recommendation</div>
+                        <div class="text-xs text-gray-500">2 minutes ago</div>
+                    </div>
+                </div>
+                
+                <div class="flex items-start p-3 bg-orange-50 rounded-lg">
+                    <i class="fas fa-exclamation-triangle text-orange-600 mt-1 mr-3"></i>
+                    <div class="flex-1">
+                        <div class="text-sm font-medium text-gray-800">High Risk Alert</div>
+                        <div class="text-xs text-gray-600">Portfolio concentration risk detected</div>
+                        <div class="text-xs text-gray-500">5 minutes ago</div>
+                    </div>
+                </div>
+                
+                <div class="flex items-start p-3 bg-blue-50 rounded-lg">
+                    <i class="fas fa-info-circle text-blue-600 mt-1 mr-3"></i>
+                    <div class="flex-1">
+                        <div class="text-sm font-medium text-gray-800">ML Model Updated</div>
+                        <div class="text-xs text-gray-600">Accuracy improved to 89.2%</div>
+                        <div class="text-xs text-gray-500">1 hour ago</div>
+                    </div>
+                </div>
+            </div>
+            
+            <button onclick="toggleNotifications()" class="w-full mt-4 py-2 bg-gray-100 text-gray-800 rounded-lg font-medium">
+                Close
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeApp();
+            checkNotificationPermission();
+            loadUserPreferences();
+        });
+        
+        function initializeApp() {
+            // Check if Service Worker is supported and register it
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('/wintradesgo/sw.js')
+                    .then(registration => {
+                        console.log('Service Worker registered:', registration);
+                    })
+                    .catch(error => {
+                        console.log('Service Worker registration failed:', error);
+                    });
+            }
+            
+            // Load initial data
+            updateMarketData();
+            loadRecentActivity();
+        }
+        
+        function navigateTo(page) {
+            // Add loading animation
+            showToast('Loading...', 'info');
+            
+            // Navigate to page
+            setTimeout(() => {
+                window.location.href = page;
+            }, 300);
+        }
+        
+        function quickAction() {
+            // Show quick action menu
+            const actions = [
+                { title: 'Quick Buy', action: () => showComingSoon('Quick Buy') },
+                { title: 'Quick Sell', action: () => showComingSoon('Quick Sell') },
+                { title: 'Emergency Stop', action: () => emergencyStop() },
+                { title: 'Portfolio Summary', action: () => navigateTo('mobile-dashboard.html') }
+            ];
+            
+            showActionMenu(actions);
+        }
+        
+        function showActionMenu(actions) {
+            const menu = document.createElement('div');
+            menu.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end justify-center p-4';
+            
+            menu.innerHTML = `
+                <div class="bg-white rounded-2xl p-4 w-full max-w-sm">
+                    <div class="w-12 h-1 bg-gray-300 rounded-full mx-auto mb-4"></div>
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4 text-center">Quick Actions</h3>
+                    <div class="space-y-2">
+                        ${actions.map(action => `
+                            <button onclick="${action.action.toString().match(/=> (.*)/)[1]}" 
+                                    class="w-full p-3 text-left bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors">
+                                ${action.title}
+                            </button>
+                        `).join('')}
+                        <button onclick="this.parentElement.parentElement.parentElement.remove()" 
+                                class="w-full p-3 text-center bg-red-50 text-red-600 rounded-lg font-medium">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            menu.addEventListener('click', (e) => {
+                if (e.target === menu) menu.remove();
+            });
+            
+            document.body.appendChild(menu);
+        }
+        
+        function toggleNotifications() {
+            const panel = document.getElementById('notification-panel');
+            panel.classList.toggle('hidden');
+        }
+        
+        function checkNotificationPermission() {
+            if ('Notification' in window) {
+                if (Notification.permission === 'default') {
+                    // Show permission request
+                    setTimeout(() => {
+                        if (confirm('Enable push notifications for trading signals?')) {
+                            Notification.requestPermission().then(permission => {
+                                if (permission === 'granted') {
+                                    showToast('Push notifications enabled!', 'success');
+                                }
+                            });
+                        }
+                    }, 2000);
+                }
+            }
+        }
+        
+        function refreshData() {
+            showToast('Refreshing data...', 'info');
+            
+            // Simulate data refresh
+            setTimeout(() => {
+                updateMarketData();
+                loadRecentActivity();
+                showToast('Data updated!', 'success');
+            }, 1500);
+        }
+        
+        function updateMarketData() {
+            // Simulate market data update
+            const btcPrice = 67240 + Math.random() * 1000 - 500;
+            const change = ((btcPrice - 67240) / 67240 * 100);
+            
+            // Update BTC price in market overview if element exists
+            const btcElement = document.querySelector('.text-blue-600');
+            if (btcElement && btcElement.textContent.includes('$')) {
+                btcElement.textContent = `$${btcPrice.toFixed(0)} (${change >= 0 ? '+' : ''}${change.toFixed(1)}%)`;
+            }
+        }
+        
+        function loadRecentActivity() {
+            // This would fetch recent activity from the API
+            // For now, we'll use the static content
+        }
+        
+        function loadUserPreferences() {
+            // Load user preferences from localStorage
+            const preferences = localStorage.getItem('wintradesUserPreferences');
+            if (preferences) {
+                const prefs = JSON.parse(preferences);
+                // Apply user preferences
+            }
+        }
+        
+        function showComingSoon(feature) {
+            showToast(`${feature} coming soon!`, 'info');
+        }
+        
+        function emergencyStop() {
+            if (confirm('Emergency stop all trading activities?')) {
+                showToast('Emergency stop activated!', 'warning');
+                // Implement emergency stop logic
+            }
+        }
+        
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `fixed top-4 left-4 right-4 p-3 rounded-lg text-white text-sm font-medium z-50 ${
+                type === 'success' ? 'bg-green-600' :
+                type === 'error' ? 'bg-red-600' :
+                type === 'warning' ? 'bg-orange-600' : 'bg-blue-600'
+            }`;
+            toast.textContent = message;
+            
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.transform = 'translateY(-100%)';
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+        
+        // Add touch gestures for better mobile experience
+        let touchStartY = 0;
+        
+        document.addEventListener('touchstart', function(e) {
+            touchStartY = e.touches[0].clientY;
+        });
+        
+        document.addEventListener('touchend', function(e) {
+            const touchEndY = e.changedTouches[0].clientY;
+            const deltaY = touchStartY - touchEndY;
+            
+            // Pull-to-refresh gesture (swipe down)
+            if (deltaY < -100 && window.scrollY === 0) {
+                refreshData();
+            }
+        });
+    </script>
+</body>
+</html>

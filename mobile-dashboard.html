@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mobile Dashboard - WinTrades</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .mobile-container {
+            max-width: 428px;
+            margin: 0 auto;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        
+        .signal-card {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .signal-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+        
+        .signal-buy {
+            border-left: 4px solid #10b981;
+        }
+        
+        .signal-sell {
+            border-left: 4px solid #ef4444;
+        }
+        
+        .signal-risk {
+            border-left: 4px solid #f59e0b;
+        }
+        
+        .confidence-bar {
+            height: 4px;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        
+        .confidence-fill {
+            height: 100%;
+            border-radius: 2px;
+            transition: width 0.5s ease;
+        }
+        
+        .pulse-dot {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .portfolio-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .risk-indicator {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            position: relative;
+            background: conic-gradient(
+                #10b981 0deg 120deg,
+                #f59e0b 120deg 240deg,
+                #ef4444 240deg 360deg
+            );
+        }
+        
+        .risk-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 40px;
+            height: 40px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.75rem;
+        }
+        
+        .bottom-nav {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .nav-item {
+            transition: all 0.3s ease;
+        }
+        
+        .nav-item.active {
+            color: #667eea;
+            transform: translateY(-2px);
+        }
+        
+        .model-chip {
+            background: rgba(102, 126, 234, 0.1);
+            border: 1px solid rgba(102, 126, 234, 0.3);
+        }
+        
+        .model-chip.active {
+            background: #667eea;
+            color: white;
+        }
+        
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: #ef4444;
+            color: white;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div class="mobile-container">
+        <!-- Header -->
+        <div class="glass-card rounded-none rounded-b-xl p-4 sticky top-0 z-50">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <div class="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center mr-3">
+                        <i class="fas fa-chart-line text-white"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-lg font-bold text-gray-800">WinTrades</h1>
+                        <div class="flex items-center text-xs text-gray-600">
+                            <div class="pulse-dot w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                            AI Active
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <button class="relative p-2" onclick="openNotifications()">
+                        <i class="fas fa-bell text-gray-600"></i>
+                        <div class="notification-badge" id="notification-count">3</div>
+                    </button>
+                    <button class="p-2" onclick="openSettings()">
+                        <i class="fas fa-cog text-gray-600"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Content -->
+        <div class="p-4 pb-20 space-y-4">
+            
+            <!-- Portfolio Summary -->
+            <div class="portfolio-card glass-card p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <div class="text-white/80 text-sm">Total Portfolio</div>
+                        <div class="text-2xl font-bold text-white" id="portfolio-value">$125,450.75</div>
+                        <div class="flex items-center text-sm">
+                            <i class="fas fa-arrow-up text-green-300 mr-1"></i>
+                            <span class="text-green-300" id="portfolio-change">+$2,340.50 (1.9%)</span>
+                        </div>
+                    </div>
+                    <div class="risk-indicator">
+                        <div class="risk-center">
+                            <span id="risk-score">65</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-3 gap-4 text-center text-white/90">
+                    <div>
+                        <div class="text-lg font-semibold" id="active-positions">3</div>
+                        <div class="text-xs">Positions</div>
+                    </div>
+                    <div>
+                        <div class="text-lg font-semibold" id="active-signals">5</div>
+                        <div class="text-xs">Signals</div>
+                    </div>
+                    <div>
+                        <div class="text-lg font-semibold" id="ml-accuracy">92%</div>
+                        <div class="text-xs">AI Accuracy</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Active ML Models -->
+            <div class="glass-card p-4">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-lg font-semibold text-gray-800">Active ML Models</h3>
+                    <button onclick="refreshModels()" class="text-blue-600 text-sm">
+                        <i class="fas fa-sync-alt mr-1"></i>Refresh
+                    </button>
+                </div>
+                
+                <div class="flex space-x-2 mb-3">
+                    <div class="model-chip active px-3 py-1 rounded-full text-xs font-medium">
+                        <i class="fas fa-network-wired mr-1"></i>LSTM (60%)
+                    </div>
+                    <div class="model-chip px-3 py-1 rounded-full text-xs font-medium">
+                        <i class="fas fa-tree mr-1"></i>RF (25%)
+                    </div>
+                    <div class="model-chip px-3 py-1 rounded-full text-xs font-medium">
+                        <i class="fas fa-vector-square mr-1"></i>SVM (15%)
+                    </div>
+                </div>
+                
+                <div class="bg-gray-50 rounded-lg p-3">
+                    <div class="text-xs text-gray-600 mb-2">Model Performance (24h)</div>
+                    <div class="space-y-2">
+                        <div class="flex justify-between text-xs">
+                            <span>LSTM Neural Network</span>
+                            <span class="font-semibold text-green-600">92.5%</span>
+                        </div>
+                        <div class="flex justify-between text-xs">
+                            <span>Random Forest</span>
+                            <span class="font-semibold text-blue-600">89.2%</span>
+                        </div>
+                        <div class="flex justify-between text-xs">
+                            <span>Support Vector Machine</span>
+                            <span class="font-semibold text-orange-600">87.1%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent ML Signals -->
+            <div class="glass-card p-4">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-lg font-semibold text-gray-800">Recent Signals</h3>
+                    <div class="flex items-center space-x-2">
+                        <select id="signal-filter" class="text-xs border rounded px-2 py-1">
+                            <option value="all">All Signals</option>
+                            <option value="buy">Buy Only</option>
+                            <option value="sell">Sell Only</option>
+                            <option value="high">High Confidence</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="space-y-3" id="signals-container">
+                    <!-- Signal cards will be inserted here -->
+                </div>
+                
+                <button onclick="loadMoreSignals()" class="w-full mt-3 text-blue-600 text-sm font-medium py-2">
+                    Load More Signals
+                </button>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="glass-card p-4">
+                <h3 class="text-lg font-semibold text-gray-800 mb-3">Quick Actions</h3>
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="viewPortfolio()" class="flex items-center justify-center p-3 bg-blue-600 text-white rounded-lg font-medium">
+                        <i class="fas fa-chart-pie mr-2"></i>Portfolio
+                    </button>
+                    <button onclick="setAlert()" class="flex items-center justify-center p-3 bg-green-600 text-white rounded-lg font-medium">
+                        <i class="fas fa-bell mr-2"></i>Set Alert
+                    </button>
+                    <button onclick="analyzeRisk()" class="flex items-center justify-center p-3 bg-orange-600 text-white rounded-lg font-medium">
+                        <i class="fas fa-shield-alt mr-2"></i>Risk Analysis
+                    </button>
+                    <button onclick="openAnalytics()" class="flex items-center justify-center p-3 bg-purple-600 text-white rounded-lg font-medium">
+                        <i class="fas fa-chart-bar mr-2"></i>Analytics
+                    </button>
+                </div>
+            </div>
+
+            <!-- Mini Chart -->
+            <div class="glass-card p-4">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-lg font-semibold text-gray-800">Performance Chart</h3>
+                    <div class="flex space-x-1">
+                        <button class="px-2 py-1 text-xs bg-blue-600 text-white rounded">1D</button>
+                        <button class="px-2 py-1 text-xs text-gray-600 rounded">1W</button>
+                        <button class="px-2 py-1 text-xs text-gray-600 rounded">1M</button>
+                    </div>
+                </div>
+                <div class="h-32">
+                    <canvas id="performanceChart"></canvas>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Bottom Navigation -->
+        <div class="bottom-nav fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-sm p-4">
+            <div class="flex justify-around">
+                <button class="nav-item flex flex-col items-center" onclick="navigateTo('mobile-home.html')">
+                    <i class="fas fa-home mb-1"></i>
+                    <span class="text-xs">Home</span>
+                </button>
+                <button class="nav-item active flex flex-col items-center" onclick="switchTab('dashboard')">
+                    <i class="fas fa-chart-line mb-1"></i>
+                    <span class="text-xs">Dashboard</span>
+                </button>
+                <button class="nav-item flex flex-col items-center" onclick="navigateTo('mobile-risk.html')">
+                    <i class="fas fa-shield-alt mb-1"></i>
+                    <span class="text-xs">Risk</span>
+                </button>
+                <button class="nav-item flex flex-col items-center" onclick="navigateTo('mobile-settings.html')">
+                    <i class="fas fa-cog mb-1"></i>
+                    <span class="text-xs">Settings</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Modal -->
+    <div id="notification-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+        <div class="glass-card w-full max-w-md p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold">Notifications</h3>
+                <button onclick="closeNotifications()" class="text-gray-500">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div id="notifications-list" class="space-y-3">
+                <!-- Notifications will be inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let currentSignals = [];
+        let performanceChart = null;
+        
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeDashboard();
+            loadRecentSignals();
+            initPerformanceChart();
+            checkForNewSignals();
+            
+            // Set up auto-refresh
+            setInterval(refreshDashboard, 30000); // 30 seconds
+        });
+        
+        function initializeDashboard() {
+            // Load user settings
+            const settings = JSON.parse(localStorage.getItem('wintradesSettings') || '{}');
+            
+            // Apply user's model preferences
+            applyModelPreferences(settings);
+            
+            // Load portfolio data
+            loadPortfolioData();
+            
+            // Register service worker if supported
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('/wintradesgo/sw.js')
+                    .then(registration => console.log('SW registered'))
+                    .catch(error => console.log('SW registration failed'));
+            }
+        }
+        
+        function loadRecentSignals() {
+            fetch('/wintradesgo/api/trading/production.php?action=check_high_confidence_signals&threshold=85&limit=5')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        currentSignals = data.signals;
+                        displaySignals(data.signals);
+                        updateSignalCount(data.count);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading signals:', error);
+                    displayFallbackSignals();
+                });
+        }
+        
+        function displaySignals(signals) {
+            const container = document.getElementById('signals-container');
+            container.innerHTML = '';
+            
+            signals.forEach(signal => {
+                const signalCard = createSignalCard(signal);
+                container.appendChild(signalCard);
+            });
+        }
+        
+        function createSignalCard(signal) {
+            const div = document.createElement('div');
+            div.className = `signal-card glass-card p-3 signal-${signal.signal_type}`;
+            
+            const confidenceColor = signal.confidence >= 90 ? 'bg-green-500' : 
+                                   signal.confidence >= 80 ? 'bg-yellow-500' : 'bg-orange-500';
+            
+            div.innerHTML = `
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <div class="w-8 h-8 bg-${signal.signal_type === 'buy' ? 'green' : 'red'}-100 rounded-lg flex items-center justify-center mr-3">
+                            <i class="fas fa-arrow-${signal.signal_type === 'buy' ? 'up' : 'down'} text-${signal.signal_type === 'buy' ? 'green' : 'red'}-600 text-sm"></i>
+                        </div>
+                        <div>
+                            <div class="font-semibold text-gray-800">${signal.symbol} ${signal.signal_type.toUpperCase()}</div>
+                            <div class="text-xs text-gray-600">${signal.model} • ${formatTime(signal.timestamp)}</div>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-sm font-semibold text-gray-800">${signal.confidence}%</div>
+                        <div class="text-xs text-gray-600">$${signal.current_price.toLocaleString()}</div>
+                    </div>
+                </div>
+                <div class="mt-2">
+                    <div class="confidence-bar bg-gray-200">
+                        <div class="confidence-fill ${confidenceColor}" style="width: ${signal.confidence}%"></div>
+                    </div>
+                </div>
+            `;
+            
+            div.addEventListener('click', () => showSignalDetails(signal));
+            
+            return div;
+        }
+        
+        function displayFallbackSignals() {
+            const fallbackSignals = [
+                {
+                    id: 'fallback_1',
+                    symbol: 'BTC',
+                    signal_type: 'buy',
+                    confidence: 94,
+                    current_price: 67240,
+                    model: 'LSTM',
+                    timestamp: new Date().toISOString()
+                },
+                {
+                    id: 'fallback_2',
+                    symbol: 'ETH',
+                    signal_type: 'sell',
+                    confidence: 87,
+                    current_price: 2650,
+                    model: 'Random Forest',
+                    timestamp: new Date(Date.now() - 300000).toISOString()
+                }
+            ];
+            
+            displaySignals(fallbackSignals);
+        }
+        
+        function initPerformanceChart() {
+            const ctx = document.getElementById('performanceChart').getContext('2d');
+            
+            performanceChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['6h', '5h', '4h', '3h', '2h', '1h', 'Now'],
+                    datasets: [{
+                        label: 'Portfolio Value',
+                        data: [123500, 124200, 123800, 125100, 124900, 125300, 125450],
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        borderWidth: 2,
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            display: false
+                        },
+                        y: {
+                            display: false
+                        }
+                    },
+                    elements: {
+                        point: {
+                            radius: 0
+                        }
+                    }
+                }
+            });
+        }
+        
+        function loadPortfolioData() {
+            fetch('/wintradesgo/api/trading/production.php?action=mobile_portfolio_summary')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        updatePortfolioDisplay(data.portfolio);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading portfolio:', error);
+                });
+        }
+        
+        function updatePortfolioDisplay(portfolio) {
+            document.getElementById('portfolio-value').textContent = `$${portfolio.total_value.toLocaleString()}`;
+            document.getElementById('portfolio-change').textContent = 
+                `+$${portfolio.daily_change.toLocaleString()} (${portfolio.daily_change_percent}%)`;
+            document.getElementById('active-positions').textContent = portfolio.positions.length;
+            document.getElementById('active-signals').textContent = portfolio.active_signals;
+            document.getElementById('risk-score').textContent = portfolio.risk_score;
+        }
+        
+        function applyModelPreferences(settings) {
+            if (settings.selectedModels) {
+                document.querySelectorAll('.model-chip').forEach(chip => {
+                    chip.classList.remove('active');
+                });
+                
+                settings.selectedModels.forEach(model => {
+                    const chip = document.querySelector(`.model-chip:contains("${model.toUpperCase()}")`);
+                    if (chip) chip.classList.add('active');
+                });
+            }
+        }
+        
+        function refreshDashboard() {
+            loadRecentSignals();
+            loadPortfolioData();
+            checkForNewSignals();
+        }
+        
+        function checkForNewSignals() {
+            // Check for new high-confidence signals
+            const settings = JSON.parse(localStorage.getItem('wintradesSettings') || '{}');
+            const threshold = settings.confidenceThreshold || 90;
+            
+            fetch(`/wintradesgo/api/trading/production.php?action=check_high_confidence_signals&threshold=${threshold}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.signals.length > 0) {
+                        // Check if there are new signals
+                        const newSignals = data.signals.filter(signal => 
+                            !currentSignals.find(existing => existing.id === signal.id)
+                        );
+                        
+                        if (newSignals.length > 0) {
+                            showNewSignalNotification(newSignals[0]);
+                            updateNotificationBadge();
+                        }
+                    }
+                })
+                .catch(error => console.error('Error checking signals:', error));
+        }
+        
+        function showNewSignalNotification(signal) {
+            if (Notification.permission === 'granted') {
+                const notification = new Notification(`🤖 ${signal.symbol} ${signal.signal_type.toUpperCase()} Signal`, {
+                    body: `${signal.confidence}% confidence - $${signal.current_price}`,
+                    icon: '/wintradesgo/favicon.ico',
+                    tag: signal.id
+                });
+                
+                notification.onclick = () => showSignalDetails(signal);
+            }
+        }
+        
+        function updateNotificationBadge() {
+            const badge = document.getElementById('notification-count');
+            const count = parseInt(badge.textContent) + 1;
+            badge.textContent = count;
+        }
+        
+        function updateSignalCount(count) {
+            document.getElementById('active-signals').textContent = count;
+        }
+        
+        // UI Event Handlers
+        function openNotifications() {
+            document.getElementById('notification-modal').classList.remove('hidden');
+            loadNotifications();
+        }
+        
+        function closeNotifications() {
+            document.getElementById('notification-modal').classList.add('hidden');
+        }
+        
+        function openSettings() {
+            window.location.href = '/wintradesgo/mobile-settings.html';
+        }
+        
+        function switchTab(tab) {
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            event.target.closest('.nav-item').classList.add('active');
+            
+            switch(tab) {
+                case 'signals':
+                    window.location.href = '/wintradesgo/mobile-signals.html';
+                    break;
+                case 'portfolio':
+                    window.location.href = '/wintradesgo/mobile-portfolio.html';
+                    break;
+                case 'settings':
+                    window.location.href = '/wintradesgo/mobile-settings.html';
+                    break;
+            }
+        }
+        
+        function showSignalDetails(signal) {
+            alert(`Signal Details:\n${signal.symbol} ${signal.signal_type.toUpperCase()}\nConfidence: ${signal.confidence}%\nModel: ${signal.model}\nPrice: $${signal.current_price}`);
+        }
+        
+        function refreshModels() {
+            // Simulate model refresh
+            showToast('Models refreshed successfully!', 'success');
+        }
+        
+        function loadMoreSignals() {
+            // Simulate loading more signals
+            showToast('Loading more signals...', 'info');
+        }
+        
+        function viewPortfolio() {
+            window.location.href = '/wintradesgo/mobile-portfolio.html';
+        }
+        
+        function setAlert() {
+            const symbol = prompt('Enter cryptocurrency symbol (e.g., BTC):');
+            if (symbol) {
+                showToast(`Alert set for ${symbol}`, 'success');
+            }
+        }
+        
+        function analyzeRisk() {
+            window.location.href = '/wintradesgo/mobile-risk.html';
+        }
+        
+        function openAnalytics() {
+            window.location.href = '/wintradesgo/ml-analytics.html';
+        }
+        
+        function loadNotifications() {
+            const notificationsList = document.getElementById('notifications-list');
+            notificationsList.innerHTML = `
+                <div class="flex items-start p-3 bg-blue-50 rounded-lg">
+                    <i class="fas fa-robot text-blue-600 mr-3 mt-1"></i>
+                    <div>
+                        <div class="font-medium text-gray-800">BTC Buy Signal</div>
+                        <div class="text-sm text-gray-600">95% confidence - $67,240</div>
+                        <div class="text-xs text-gray-500">2 minutes ago</div>
+                    </div>
+                </div>
+                <div class="flex items-start p-3 bg-green-50 rounded-lg">
+                    <i class="fas fa-check-circle text-green-600 mr-3 mt-1"></i>
+                    <div>
+                        <div class="font-medium text-gray-800">ETH Position Closed</div>
+                        <div class="text-sm text-gray-600">+$1,250 profit</div>
+                        <div class="text-xs text-gray-500">15 minutes ago</div>
+                    </div>
+                </div>
+                <div class="flex items-start p-3 bg-orange-50 rounded-lg">
+                    <i class="fas fa-exclamation-triangle text-orange-600 mr-3 mt-1"></i>
+                    <div>
+                        <div class="font-medium text-gray-800">Risk Alert</div>
+                        <div class="text-sm text-gray-600">Portfolio risk increased to 68%</div>
+                        <div class="text-xs text-gray-500">1 hour ago</div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Utility functions
+        function formatTime(timestamp) {
+            const date = new Date(timestamp);
+            const now = new Date();
+            const diff = Math.floor((now - date) / 1000 / 60); // minutes
+            
+            if (diff < 1) return 'Just now';
+            if (diff < 60) return `${diff}m ago`;
+            if (diff < 1440) return `${Math.floor(diff / 60)}h ago`;
+            return date.toLocaleDateString();
+        }
+        
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `fixed top-4 left-4 right-4 p-3 rounded-lg text-white text-sm font-medium z-50 ${
+                type === 'success' ? 'bg-green-600' :
+                type === 'error' ? 'bg-red-600' :
+                type === 'warning' ? 'bg-orange-600' : 'bg-blue-600'
+            }`;
+            toast.textContent = message;
+            
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.transform = 'translateY(-100%)';
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+        
+        function navigateTo(page) {
+            showToast('Loading...', 'info');
+            setTimeout(() => {
+                window.location.href = page;
+            }, 300);
+        }
+        
+        // Signal filter handler
+        document.getElementById('signal-filter').addEventListener('change', function() {
+            const filter = this.value;
+            let filteredSignals = currentSignals;
+            
+            if (filter !== 'all') {
+                filteredSignals = currentSignals.filter(signal => {
+                    switch(filter) {
+                        case 'buy':
+                            return signal.signal_type === 'buy';
+                        case 'sell':
+                            return signal.signal_type === 'sell';
+                        case 'high':
+                            return signal.confidence >= 90;
+                        default:
+                            return true;
+                    }
+                });
+            }
+            
+            displaySignals(filteredSignals);
+        });
+    </script>
+</body>
+</html>

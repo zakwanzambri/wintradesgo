@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mobile Settings - WinTrades</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Mobile-first responsive design */
+        .mobile-container {
+            max-width: 428px;
+            margin: 0 auto;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .settings-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        
+        .toggle-switch {
+            position: relative;
+            width: 60px;
+            height: 30px;
+            background: #ccc;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .toggle-switch.active {
+            background: #4CAF50;
+        }
+        
+        .toggle-slider {
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 24px;
+            height: 24px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.3s;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+        
+        .toggle-switch.active .toggle-slider {
+            transform: translateX(30px);
+        }
+        
+        .confidence-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 8px;
+            border-radius: 4px;
+            background: #ddd;
+            outline: none;
+        }
+        
+        .confidence-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+        
+        .pulse-animation {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        .notification-preview {
+            background: rgba(102, 126, 234, 0.1);
+            border-left: 4px solid #667eea;
+            animation: slideIn 0.5s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(-100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        .model-card {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .model-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .model-card.selected {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.05);
+        }
+        
+        .risk-gauge {
+            background: conic-gradient(
+                #4CAF50 0deg 120deg,
+                #FFC107 120deg 240deg,
+                #F44336 240deg 360deg
+            );
+            border-radius: 50%;
+            position: relative;
+        }
+        
+        .risk-pointer {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform-origin: center;
+            transition: transform 0.5s ease;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div class="mobile-container">
+        <!-- Header -->
+        <div class="bg-white shadow-sm sticky top-0 z-50">
+            <div class="flex items-center justify-between p-4">
+                <button onclick="navigateTo('mobile-home.html')" class="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors">
+                    <i class="fas fa-home text-gray-600"></i>
+                </button>
+                <h1 class="text-xl font-bold text-gray-800">Mobile Settings</h1>
+                <button onclick="saveSettings()" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
+                    Save
+                </button>
+            </div>
+        </div>
+
+        <!-- Content -->
+        <div class="p-4 space-y-6">
+            
+            <!-- Push Notifications Section -->
+            <div class="settings-card p-6">
+                <div class="flex items-center mb-4">
+                    <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                        <i class="fas fa-bell text-blue-600"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-800">Push Notifications</h2>
+                        <p class="text-sm text-gray-600">ML signals with high confidence</p>
+                    </div>
+                </div>
+
+                <!-- Notification Toggle -->
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <label class="text-sm font-medium text-gray-700">Enable Notifications</label>
+                            <p class="text-xs text-gray-500">Receive alerts for ML signals</p>
+                        </div>
+                        <div class="toggle-switch active" id="notifications-toggle">
+                            <div class="toggle-slider"></div>
+                        </div>
+                    </div>
+
+                    <!-- Confidence Threshold -->
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between">
+                            <label class="text-sm font-medium text-gray-700">Confidence Threshold</label>
+                            <span id="confidence-value" class="text-sm font-semibold text-blue-600">90%</span>
+                        </div>
+                        <input 
+                            type="range" 
+                            id="confidence-slider" 
+                            class="confidence-slider" 
+                            min="70" 
+                            max="99" 
+                            value="90"
+                            oninput="updateConfidenceValue(this.value)"
+                        >
+                        <p class="text-xs text-gray-500">Only notify for signals above this confidence level</p>
+                    </div>
+
+                    <!-- Notification Types -->
+                    <div class="space-y-3">
+                        <h3 class="text-sm font-medium text-gray-700">Notification Types</h3>
+                        
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                                <i class="fas fa-chart-line text-green-600 mr-2"></i>
+                                <span class="text-sm text-gray-700">Buy Signals</span>
+                            </div>
+                            <div class="toggle-switch active" id="buy-signals-toggle">
+                                <div class="toggle-slider"></div>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                                <i class="fas fa-chart-line-down text-red-600 mr-2"></i>
+                                <span class="text-sm text-gray-700">Sell Signals</span>
+                            </div>
+                            <div class="toggle-switch active" id="sell-signals-toggle">
+                                <div class="toggle-slider"></div>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                                <i class="fas fa-exclamation-triangle text-yellow-600 mr-2"></i>
+                                <span class="text-sm text-gray-700">Risk Alerts</span>
+                            </div>
+                            <div class="toggle-switch active" id="risk-alerts-toggle">
+                                <div class="toggle-slider"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Notification Preview -->
+                    <div class="notification-preview p-3 rounded-lg">
+                        <div class="flex items-start">
+                            <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center mr-3 flex-shrink-0">
+                                <i class="fas fa-robot text-white text-sm"></i>
+                            </div>
+                            <div class="flex-1">
+                                <div class="text-sm font-medium text-gray-800">AI Signal Alert</div>
+                                <div class="text-xs text-gray-600 mt-1">BTC Buy Signal - 95% Confidence</div>
+                                <div class="text-xs text-blue-600 mt-1">Price: $67,240 • Target: $70,500</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ML Model Preferences -->
+            <div class="settings-card p-6">
+                <div class="flex items-center mb-4">
+                    <div class="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center mr-3">
+                        <i class="fas fa-brain text-purple-600"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-800">ML Model Preferences</h2>
+                        <p class="text-sm text-gray-600">Choose your preferred models</p>
+                    </div>
+                </div>
+
+                <div class="space-y-3">
+                    <!-- LSTM Model -->
+                    <div class="model-card selected border-2 border-gray-200 rounded-lg p-4" data-model="lstm">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                                <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                                    <i class="fas fa-network-wired text-blue-600 text-sm"></i>
+                                </div>
+                                <div>
+                                    <div class="text-sm font-medium text-gray-800">LSTM Neural Network</div>
+                                    <div class="text-xs text-gray-500">Best for trend prediction</div>
+                                </div>
+                            </div>
+                            <div class="flex items-center">
+                                <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full mr-2">92% Accuracy</span>
+                                <i class="fas fa-check-circle text-green-600"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Random Forest Model -->
+                    <div class="model-card border-2 border-gray-200 rounded-lg p-4" data-model="rf">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                                <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+                                    <i class="fas fa-tree text-green-600 text-sm"></i>
+                                </div>
+                                <div>
+                                    <div class="text-sm font-medium text-gray-800">Random Forest</div>
+                                    <div class="text-xs text-gray-500">Robust ensemble method</div>
+                                </div>
+                            </div>
+                            <div class="flex items-center">
+                                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full mr-2">89% Accuracy</span>
+                                <i class="fas fa-circle text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SVM Model -->
+                    <div class="model-card border-2 border-gray-200 rounded-lg p-4" data-model="svm">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                                <div class="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center mr-3">
+                                    <i class="fas fa-vector-square text-orange-600 text-sm"></i>
+                                </div>
+                                <div>
+                                    <div class="text-sm font-medium text-gray-800">Support Vector Machine</div>
+                                    <div class="text-xs text-gray-500">Pattern recognition</div>
+                                </div>
+                            </div>
+                            <div class="flex items-center">
+                                <span class="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded-full mr-2">87% Accuracy</span>
+                                <i class="fas fa-circle text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Model Weight Adjustment -->
+                    <div class="bg-gray-50 rounded-lg p-4 mt-4">
+                        <h3 class="text-sm font-medium text-gray-700 mb-3">Signal Weight Distribution</h3>
+                        <div class="space-y-3">
+                            <div>
+                                <div class="flex justify-between text-xs text-gray-600 mb-1">
+                                    <span>LSTM</span>
+                                    <span id="lstm-weight">60%</span>
+                                </div>
+                                <input type="range" id="lstm-slider" min="0" max="100" value="60" class="w-full h-2 bg-gray-200 rounded-lg">
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-xs text-gray-600 mb-1">
+                                    <span>Random Forest</span>
+                                    <span id="rf-weight">25%</span>
+                                </div>
+                                <input type="range" id="rf-slider" min="0" max="100" value="25" class="w-full h-2 bg-gray-200 rounded-lg">
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-xs text-gray-600 mb-1">
+                                    <span>SVM</span>
+                                    <span id="svm-weight">15%</span>
+                                </div>
+                                <input type="range" id="svm-slider" min="0" max="100" value="15" class="w-full h-2 bg-gray-200 rounded-lg">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Risk Assessment -->
+            <div class="settings-card p-6">
+                <div class="flex items-center mb-4">
+                    <div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center mr-3">
+                        <i class="fas fa-shield-alt text-red-600"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-800">Risk Assessment</h2>
+                        <p class="text-sm text-gray-600">Configure risk management</p>
+                    </div>
+                </div>
+
+                <!-- Risk Level -->
+                <div class="mb-6">
+                    <div class="flex items-center justify-between mb-3">
+                        <label class="text-sm font-medium text-gray-700">Risk Tolerance</label>
+                        <span id="risk-level" class="text-sm font-semibold text-orange-600">Moderate</span>
+                    </div>
+                    
+                    <!-- Risk Gauge -->
+                    <div class="relative w-32 h-32 mx-auto mb-4">
+                        <div class="risk-gauge w-full h-full">
+                            <div class="risk-pointer absolute w-1 h-12 bg-gray-800 rounded-full" style="transform: translate(-50%, -100%) rotate(180deg);" id="risk-pointer">
+                                <div class="w-3 h-3 bg-gray-800 rounded-full absolute -bottom-1 -left-1"></div>
+                            </div>
+                        </div>
+                        <div class="absolute inset-0 flex items-center justify-center">
+                            <div class="bg-white rounded-full w-16 h-16 flex items-center justify-center text-xs font-bold text-gray-700">
+                                <span id="risk-percentage">60%</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <input type="range" id="risk-slider" min="10" max="90" value="60" class="w-full h-2 bg-gray-200 rounded-lg" oninput="updateRiskLevel(this.value)">
+                    <div class="flex justify-between text-xs text-gray-500 mt-1">
+                        <span>Conservative</span>
+                        <span>Aggressive</span>
+                    </div>
+                </div>
+
+                <!-- Position Sizing -->
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <label class="text-sm font-medium text-gray-700">Position Sizing</label>
+                            <p class="text-xs text-gray-500">Auto-calculate based on risk</p>
+                        </div>
+                        <div class="toggle-switch active" id="position-sizing-toggle">
+                            <div class="toggle-slider"></div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <label class="text-sm font-medium text-gray-700">Stop Loss</label>
+                            <p class="text-xs text-gray-500">Automatic stop loss orders</p>
+                        </div>
+                        <div class="toggle-switch active" id="stop-loss-toggle">
+                            <div class="toggle-slider"></div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <label class="text-sm font-medium text-gray-700">Risk Alerts</label>
+                            <p class="text-xs text-gray-500">Notify when risk increases</p>
+                        </div>
+                        <div class="toggle-switch active" id="risk-notifications-toggle">
+                            <div class="toggle-slider"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Portfolio Risk Summary -->
+                <div class="bg-gray-50 rounded-lg p-4 mt-4">
+                    <h3 class="text-sm font-medium text-gray-700 mb-3">Current Portfolio Risk</h3>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="text-center">
+                            <div class="text-lg font-bold text-gray-800">$12,450</div>
+                            <div class="text-xs text-gray-500">Total at Risk</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-lg font-bold text-green-600">15.2%</div>
+                            <div class="text-xs text-gray-500">Risk Ratio</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="settings-card p-6">
+                <h2 class="text-lg font-semibold text-gray-800 mb-4">Quick Actions</h2>
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="testNotification()" class="bg-blue-600 text-white p-3 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
+                        <i class="fas fa-bell mr-2"></i>Test Notification
+                    </button>
+                    <button onclick="exportSettings()" class="bg-gray-600 text-white p-3 rounded-lg text-sm font-medium hover:bg-gray-700 transition-colors">
+                        <i class="fas fa-download mr-2"></i>Export Settings
+                    </button>
+                    <button onclick="resetDefaults()" class="bg-orange-600 text-white p-3 rounded-lg text-sm font-medium hover:bg-orange-700 transition-colors">
+                        <i class="fas fa-undo mr-2"></i>Reset Defaults
+                    </button>
+                    <button onclick="syncSettings()" class="bg-green-600 text-white p-3 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors">
+                        <i class="fas fa-sync mr-2"></i>Sync Settings
+                    </button>
+                </div>
+            </div>
+
+            <!-- Status Indicator -->
+            <div class="text-center py-4">
+                <div class="inline-flex items-center text-sm text-gray-500">
+                    <div class="w-2 h-2 bg-green-500 rounded-full pulse-animation mr-2"></div>
+                    Connected to WinTrades AI
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Toggle switch functionality
+        document.querySelectorAll('.toggle-switch').forEach(toggle => {
+            toggle.addEventListener('click', function() {
+                this.classList.toggle('active');
+                // Save setting to localStorage or API
+                const settingId = this.id;
+                const isActive = this.classList.contains('active');
+                localStorage.setItem(settingId, isActive);
+                
+                // Trigger specific actions based on setting
+                if (settingId === 'notifications-toggle' && isActive) {
+                    requestNotificationPermission();
+                }
+            });
+        });
+
+        // Model selection
+        document.querySelectorAll('.model-card').forEach(card => {
+            card.addEventListener('click', function() {
+                const model = this.dataset.model;
+                const icon = this.querySelector('i.fa-circle, i.fa-check-circle');
+                
+                if (this.classList.contains('selected')) {
+                    this.classList.remove('selected');
+                    icon.className = 'fas fa-circle text-gray-300';
+                } else {
+                    this.classList.add('selected');
+                    icon.className = 'fas fa-check-circle text-green-600';
+                }
+                
+                updateModelWeights();
+            });
+        });
+
+        // Confidence slider
+        function updateConfidenceValue(value) {
+            document.getElementById('confidence-value').textContent = value + '%';
+            localStorage.setItem('confidence-threshold', value);
+        }
+
+        // Risk level gauge
+        function updateRiskLevel(value) {
+            const percentage = parseInt(value);
+            const angle = (percentage / 100) * 180; // 0-180 degrees
+            
+            document.getElementById('risk-pointer').style.transform = 
+                `translate(-50%, -100%) rotate(${angle}deg)`;
+            document.getElementById('risk-percentage').textContent = percentage + '%';
+            
+            let level = 'Conservative';
+            if (percentage > 30 && percentage <= 70) level = 'Moderate';
+            if (percentage > 70) level = 'Aggressive';
+            
+            document.getElementById('risk-level').textContent = level;
+            
+            // Update color
+            const riskLevel = document.getElementById('risk-level');
+            riskLevel.className = 'text-sm font-semibold ';
+            if (percentage <= 30) riskLevel.className += 'text-green-600';
+            else if (percentage <= 70) riskLevel.className += 'text-orange-600';
+            else riskLevel.className += 'text-red-600';
+            
+            localStorage.setItem('risk-tolerance', percentage);
+        }
+
+        // Model weight sliders
+        function updateModelWeights() {
+            const lstmSlider = document.getElementById('lstm-slider');
+            const rfSlider = document.getElementById('rf-slider');
+            const svmSlider = document.getElementById('svm-slider');
+            
+            [lstmSlider, rfSlider, svmSlider].forEach(slider => {
+                slider.addEventListener('input', function() {
+                    const total = parseInt(lstmSlider.value) + parseInt(rfSlider.value) + parseInt(svmSlider.value);
+                    if (total > 100) {
+                        // Adjust other sliders to maintain 100% total
+                        const excess = total - 100;
+                        const others = [lstmSlider, rfSlider, svmSlider].filter(s => s !== this);
+                        others.forEach(s => {
+                            const reduction = Math.min(excess / others.length, parseInt(s.value));
+                            s.value = parseInt(s.value) - reduction;
+                        });
+                    }
+                    
+                    // Update display
+                    document.getElementById('lstm-weight').textContent = lstmSlider.value + '%';
+                    document.getElementById('rf-weight').textContent = rfSlider.value + '%';
+                    document.getElementById('svm-weight').textContent = svmSlider.value + '%';
+                });
+            });
+        }
+
+        // Notification functions
+        async function requestNotificationPermission() {
+            if ('Notification' in window) {
+                const permission = await Notification.requestPermission();
+                if (permission === 'granted') {
+                    showToast('Notifications enabled successfully!', 'success');
+                } else {
+                    showToast('Notification permission denied', 'error');
+                }
+            }
+        }
+
+        function testNotification() {
+            if (Notification.permission === 'granted') {
+                const notification = new Notification('WinTrades AI Alert', {
+                    body: 'BTC Buy Signal - 95% Confidence\nPrice: $67,240 • Target: $70,500',
+                    icon: '/favicon.ico',
+                    badge: '/favicon.ico',
+                    tag: 'test-notification',
+                    data: {
+                        type: 'buy',
+                        symbol: 'BTC',
+                        confidence: 95,
+                        price: 67240,
+                        target: 70500
+                    }
+                });
+                
+                notification.onclick = function() {
+                    window.focus();
+                    notification.close();
+                };
+                
+                setTimeout(() => notification.close(), 5000);
+                showToast('Test notification sent!', 'success');
+            } else {
+                showToast('Please enable notifications first', 'warning');
+            }
+        }
+
+        // Settings management
+        function saveSettings() {
+            const settings = {
+                notifications: document.getElementById('notifications-toggle').classList.contains('active'),
+                confidenceThreshold: document.getElementById('confidence-slider').value,
+                buySignals: document.getElementById('buy-signals-toggle').classList.contains('active'),
+                sellSignals: document.getElementById('sell-signals-toggle').classList.contains('active'),
+                riskAlerts: document.getElementById('risk-alerts-toggle').classList.contains('active'),
+                selectedModels: Array.from(document.querySelectorAll('.model-card.selected')).map(card => card.dataset.model),
+                modelWeights: {
+                    lstm: document.getElementById('lstm-slider').value,
+                    rf: document.getElementById('rf-slider').value,
+                    svm: document.getElementById('svm-slider').value
+                },
+                riskTolerance: document.getElementById('risk-slider').value,
+                positionSizing: document.getElementById('position-sizing-toggle').classList.contains('active'),
+                stopLoss: document.getElementById('stop-loss-toggle').classList.contains('active'),
+                riskNotifications: document.getElementById('risk-notifications-toggle').classList.contains('active')
+            };
+            
+            // Save to localStorage
+            localStorage.setItem('wintradesSettings', JSON.stringify(settings));
+            
+            // Send to API
+            fetch('/wintradesgo/api/trading/production.php?action=save_mobile_settings', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(settings)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('Settings saved successfully!', 'success');
+                } else {
+                    showToast('Failed to save settings', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error saving settings:', error);
+                showToast('Error saving settings', 'error');
+            });
+        }
+
+        function exportSettings() {
+            const settings = localStorage.getItem('wintradesSettings');
+            if (settings) {
+                const blob = new Blob([settings], {type: 'application/json'});
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'wintrades-settings.json';
+                a.click();
+                URL.revokeObjectURL(url);
+                showToast('Settings exported!', 'success');
+            }
+        }
+
+        function resetDefaults() {
+            if (confirm('Reset all settings to defaults?')) {
+                localStorage.removeItem('wintradesSettings');
+                location.reload();
+            }
+        }
+
+        function syncSettings() {
+            fetch('/wintradesgo/api/trading/production.php?action=get_mobile_settings')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.settings) {
+                    applySettings(data.settings);
+                    showToast('Settings synced!', 'success');
+                }
+            })
+            .catch(error => {
+                console.error('Error syncing settings:', error);
+                showToast('Sync failed', 'error');
+            });
+        }
+
+        function applySettings(settings) {
+            // Apply all settings to the UI
+            if (settings.notifications) {
+                document.getElementById('notifications-toggle').classList.add('active');
+            }
+            
+            document.getElementById('confidence-slider').value = settings.confidenceThreshold || 90;
+            updateConfidenceValue(settings.confidenceThreshold || 90);
+            
+            document.getElementById('risk-slider').value = settings.riskTolerance || 60;
+            updateRiskLevel(settings.riskTolerance || 60);
+            
+            // Apply other settings...
+        }
+
+        // Toast notification system
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `fixed top-4 left-4 right-4 p-4 rounded-lg text-white text-sm font-medium z-50 ${
+                type === 'success' ? 'bg-green-600' :
+                type === 'error' ? 'bg-red-600' :
+                type === 'warning' ? 'bg-orange-600' : 'bg-blue-600'
+            }`;
+            toast.textContent = message;
+            
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.transform = 'translateY(-100%)';
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Load saved settings
+            const savedSettings = localStorage.getItem('wintradesSettings');
+            if (savedSettings) {
+                applySettings(JSON.parse(savedSettings));
+            }
+            
+            // Initialize model weight sliders
+            updateModelWeights();
+            
+            // Check notification permission
+            if ('Notification' in window && Notification.permission === 'default') {
+                setTimeout(() => {
+                    if (confirm('Enable push notifications for AI trading signals?')) {
+                        requestNotificationPermission();
+                    }
+                }, 2000);
+            }
+        });
+
+        // Service Worker registration for push notifications
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/wintradesgo/sw.js')
+            .then(registration => {
+                console.log('Service Worker registered:', registration);
+            })
+            .catch(error => {
+                console.log('Service Worker registration failed:', error);
+            });
+        }
+        
+        function navigateTo(page) {
+            showToast('Loading...', 'info');
+            setTimeout(() => {
+                window.location.href = page;
+            }, 300);
+        }
+    </script>
+</body>
+</html>

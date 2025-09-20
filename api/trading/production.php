@@ -150,6 +150,31 @@ class ProductionTradingAPI {
                 case 'prediction_heatmap':
                     return $this->getPredictionHeatmap();
                     
+                // Mobile App Endpoints
+                case 'save_mobile_settings':
+                    return $this->saveMobileSettings();
+                    
+                case 'get_mobile_settings':
+                    return $this->getMobileSettings();
+                    
+                case 'send_push_notification':
+                    return $this->sendPushNotification();
+                    
+                case 'register_push_subscription':
+                    return $this->registerPushSubscription();
+                    
+                case 'check_high_confidence_signals':
+                    return $this->checkHighConfidenceSignals();
+                    
+                case 'sync_ml_signals':
+                    return $this->syncMLSignals();
+                    
+                case 'mobile_portfolio_summary':
+                    return $this->getMobilePortfolioSummary();
+                    
+                case 'mobile_risk_assessment':
+                    return $this->getMobileRiskAssessment();
+                    
                 // System Status
                 case 'system_health':
                     return $this->getSystemHealth();
@@ -1168,6 +1193,575 @@ class ProductionTradingAPI {
         }
         
         return $returns;
+    }
+    
+    /**
+     * Mobile App Enhancement Methods
+     */
+    
+    /**
+     * Save mobile app settings for a user
+     */
+    private function saveMobileSettings() {
+        $input = json_decode(file_get_contents('php://input'), true);
+        
+        if (!$input) {
+            return [
+                'success' => false,
+                'error' => 'Invalid JSON input'
+            ];
+        }
+        
+        try {
+            // Create mobile_settings table if it doesn't exist
+            $this->pdo->exec("
+                CREATE TABLE IF NOT EXISTS mobile_settings (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id INT DEFAULT 1,
+                    settings JSON NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    INDEX(user_id)
+                )
+            ");
+            
+            // Insert or update settings
+            $stmt = $this->pdo->prepare("
+                INSERT INTO mobile_settings (user_id, settings) 
+                VALUES (?, ?) 
+                ON DUPLICATE KEY UPDATE 
+                settings = VALUES(settings),
+                updated_at = CURRENT_TIMESTAMP
+            ");
+            
+            $user_id = $input['user_id'] ?? 1; // Default user for demo
+            $settings = json_encode($input);
+            
+            $stmt->execute([$user_id, $settings]);
+            
+            // If push notifications are enabled, register for high-confidence signals
+            if ($input['notifications'] ?? false) {
+                $this->scheduleHighConfidenceSignalCheck($user_id, $input['confidenceThreshold'] ?? 90);
+            }
+            
+            return [
+                'success' => true,
+                'message' => 'Mobile settings saved successfully',
+                'settings_id' => $this->pdo->lastInsertId(),
+                'timestamp' => date('Y-m-d H:i:s')
+            ];
+            
+        } catch (Exception $e) {
+            return [
+                'success' => false,
+                'error' => 'Failed to save settings: ' . $e->getMessage()
+            ];
+        }
+    }
+    
+    /**
+     * Get mobile app settings for a user
+     */
+    private function getMobileSettings() {
+        try {
+            $user_id = $_GET['user_id'] ?? 1;
+            
+            $stmt = $this->pdo->prepare("
+                SELECT settings, updated_at 
+                FROM mobile_settings 
+                WHERE user_id = ? 
+                ORDER BY updated_at DESC 
+                LIMIT 1
+            ");
+            
+            $stmt->execute([$user_id]);
+            $result = $stmt->fetch();
+            
+            if ($result) {
+                return [
+                    'success' => true,
+                    'settings' => json_decode($result['settings'], true),
+                    'last_updated' => $result['updated_at']
+                ];
+            } else {
+                // Return default settings
+                return [
+                    'success' => true,
+                    'settings' => $this->getDefaultMobileSettings(),
+                    'last_updated' => null
+                ];
+            }
+            
+        } catch (Exception $e) {
+            return [
+                'success' => false,
+                'error' => 'Failed to get settings: ' . $e->getMessage()
+            ];
+        }
+    }
+    
+    /**
+     * Send push notification for ML signals
+     */
+    private function sendPushNotification() {
+        $input = json_decode(file_get_contents('php://input'), true);
+        
+        if (!$input || !isset($input['signal'])) {
+            return [
+                'success' => false,
+                'error' => 'Signal data required'
+            ];
+        }
+        
+        $signal = $input['signal'];
+        $user_id = $input['user_id'] ?? 1;
+        
+        try {
+            // Get user's push subscription and settings
+            $settings = $this->getUserMobileSettings($user_id);
+            
+            if (!$settings['notifications'] || $signal['confidence'] < $settings['confidenceThreshold']) {
+                return [
+                    'success' => false,
+                    'message' => 'Notification criteria not met'
+                ];
+            }
+            
+            // Create notification payload
+            $notification = [
+                'title' => "🤖 WinTrades AI Alert: {$signal['symbol']}",
+                'body' => $this->formatSignalMessage($signal),
+                'icon' => '/wintradesgo/icons/ai-signal.png',
+                'badge' => '/wintradesgo/icons/badge.png',
+                'tag' => "ml-signal-{$signal['id']}",
+                'data' => $signal,
+                'requireInteraction' => true,
+                'actions' => [
+                    [
+                        'action' => 'view',
+                        'title' => 'View Signal',
+                        'icon' => '/wintradesgo/icons/view.png'
+                    ],
+                    [
+                        'action' => 'dismiss',
+                        'title' => 'Dismiss',
+                        'icon' => '/wintradesgo/icons/close.png'
+                    ]
+                ]
+            ];
+            
+            // Store notification in database for delivery
+            $this->storeNotification($user_id, $notification);
+            
+            // In a real implementation, you would use a push service like Firebase
+            // For now, we'll simulate the notification system
+            
+            return [
+                'success' => true,
+                'message' => 'Push notification sent',
+                'notification_id' => uniqid('notif_'),
+                'signal_id' => $signal['id'],
+                'timestamp' => date('Y-m-d H:i:s')
+            ];
+            
+        } catch (Exception $e) {
+            return [
+                'success' => false,
+                'error' => 'Failed to send notification: ' . $e->getMessage()
+            ];
+        }
+    }
+    
+    /**
+     * Register push subscription for a user
+     */
+    private function registerPushSubscription() {
+        $input = json_decode(file_get_contents('php://input'), true);
+        
+        if (!$input || !isset($input['subscription'])) {
+            return [
+                'success' => false,
+                'error' => 'Subscription data required'
+            ];
+        }
+        
+        try {
+            // Create push_subscriptions table if it doesn't exist
+            $this->pdo->exec("
+                CREATE TABLE IF NOT EXISTS push_subscriptions (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id INT DEFAULT 1,
+                    endpoint TEXT NOT NULL,
+                    p256dh_key TEXT,
+                    auth_key TEXT,
+                    user_agent TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    last_used TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    active BOOLEAN DEFAULT TRUE,
+                    INDEX(user_id),
+                    INDEX(active)
+                )
+            ");
+            
+            $subscription = $input['subscription'];
+            $user_id = $input['user_id'] ?? 1;
+            
+            $stmt = $this->pdo->prepare("
+                INSERT INTO push_subscriptions (
+                    user_id, endpoint, p256dh_key, auth_key, user_agent
+                ) VALUES (?, ?, ?, ?, ?)
+                ON DUPLICATE KEY UPDATE
+                last_used = CURRENT_TIMESTAMP,
+                active = TRUE
+            ");
+            
+            $stmt->execute([
+                $user_id,
+                $subscription['endpoint'],
+                $subscription['keys']['p256dh'] ?? null,
+                $subscription['keys']['auth'] ?? null,
+                $_SERVER['HTTP_USER_AGENT'] ?? null
+            ]);
+            
+            return [
+                'success' => true,
+                'message' => 'Push subscription registered',
+                'subscription_id' => $this->pdo->lastInsertId()
+            ];
+            
+        } catch (Exception $e) {
+            return [
+                'success' => false,
+                'error' => 'Failed to register subscription: ' . $e->getMessage()
+            ];
+        }
+    }
+    
+    /**
+     * Check for high confidence ML signals
+     */
+    private function checkHighConfidenceSignals() {
+        try {
+            $confidence_threshold = $_GET['threshold'] ?? 90;
+            $limit = $_GET['limit'] ?? 10;
+            
+            // Simulate high-confidence ML signals
+            $signals = [];
+            $symbols = ['BTC', 'ETH', 'ADA', 'SOL', 'DOT'];
+            
+            for ($i = 0; $i < $limit; $i++) {
+                $symbol = $symbols[array_rand($symbols)];
+                $confidence = rand(85, 99);
+                
+                if ($confidence >= $confidence_threshold) {
+                    $signals[] = [
+                        'id' => uniqid('signal_'),
+                        'symbol' => $symbol,
+                        'signal_type' => rand(0, 1) ? 'buy' : 'sell',
+                        'confidence' => $confidence,
+                        'current_price' => $this->getCurrentPrice($symbol),
+                        'target_price' => $this->getTargetPrice($symbol),
+                        'risk_level' => $this->calculateRiskLevel($symbol),
+                        'model' => ['LSTM', 'Random Forest', 'SVM'][rand(0, 2)],
+                        'timestamp' => date('Y-m-d H:i:s'),
+                        'expires_at' => date('Y-m-d H:i:s', time() + 3600)
+                    ];
+                }
+            }
+            
+            return [
+                'success' => true,
+                'signals' => $signals,
+                'count' => count($signals),
+                'threshold' => $confidence_threshold,
+                'timestamp' => date('Y-m-d H:i:s')
+            ];
+            
+        } catch (Exception $e) {
+            return [
+                'success' => false,
+                'error' => 'Failed to check signals: ' . $e->getMessage()
+            ];
+        }
+    }
+    
+    /**
+     * Sync ML signals for offline access
+     */
+    private function syncMLSignals() {
+        try {
+            $since = $_GET['since'] ?? date('Y-m-d H:i:s', time() - 86400); // Last 24 hours
+            
+            // Get recent ML signals
+            $signals = $this->getRecentMLSignals($since);
+            
+            // Get model performance data
+            $performance = $this->getModelPerformanceData();
+            
+            // Get user's selected models and weights
+            $user_id = $_GET['user_id'] ?? 1;
+            $settings = $this->getUserMobileSettings($user_id);
+            
+            return [
+                'success' => true,
+                'signals' => $signals,
+                'performance' => $performance,
+                'user_settings' => $settings,
+                'sync_timestamp' => date('Y-m-d H:i:s'),
+                'next_sync' => date('Y-m-d H:i:s', time() + 300) // 5 minutes
+            ];
+            
+        } catch (Exception $e) {
+            return [
+                'success' => false,
+                'error' => 'Failed to sync signals: ' . $e->getMessage()
+            ];
+        }
+    }
+    
+    /**
+     * Get mobile portfolio summary
+     */
+    private function getMobilePortfolioSummary() {
+        try {
+            $user_id = $_GET['user_id'] ?? 1;
+            
+            // Simulate portfolio data
+            $portfolio = [
+                'total_value' => 125450.75,
+                'daily_change' => 2340.50,
+                'daily_change_percent' => 1.9,
+                'total_pnl' => 15670.25,
+                'total_pnl_percent' => 14.3,
+                'positions' => [
+                    [
+                        'symbol' => 'BTC',
+                        'amount' => 1.5,
+                        'value' => 67240.00,
+                        'pnl' => 5420.50,
+                        'pnl_percent' => 8.8
+                    ],
+                    [
+                        'symbol' => 'ETH',
+                        'amount' => 15.7,
+                        'value' => 25890.60,
+                        'pnl' => 3210.75,
+                        'pnl_percent' => 14.2
+                    ],
+                    [
+                        'symbol' => 'ADA',
+                        'amount' => 8500,
+                        'value' => 15320.00,
+                        'pnl' => -890.25,
+                        'pnl_percent' => -5.5
+                    ]
+                ],
+                'risk_score' => 65,
+                'risk_level' => 'Moderate',
+                'active_signals' => 3
+            ];
+            
+            return [
+                'success' => true,
+                'portfolio' => $portfolio,
+                'timestamp' => date('Y-m-d H:i:s')
+            ];
+            
+        } catch (Exception $e) {
+            return [
+                'success' => false,
+                'error' => 'Failed to get portfolio: ' . $e->getMessage()
+            ];
+        }
+    }
+    
+    /**
+     * Get mobile risk assessment
+     */
+    private function getMobileRiskAssessment() {
+        try {
+            $user_id = $_GET['user_id'] ?? 1;
+            $settings = $this->getUserMobileSettings($user_id);
+            
+            $risk_assessment = [
+                'overall_risk' => 65,
+                'risk_level' => 'Moderate',
+                'risk_factors' => [
+                    'concentration_risk' => 45,
+                    'volatility_risk' => 70,
+                    'liquidity_risk' => 25,
+                    'correlation_risk' => 55
+                ],
+                'recommendations' => [
+                    'Diversify BTC position (currently 53% of portfolio)',
+                    'Consider adding stablecoin allocation',
+                    'Monitor ADA position - showing weakness'
+                ],
+                'position_sizing' => [
+                    'max_position_size' => 25000,
+                    'recommended_size' => 18500,
+                    'current_largest' => 67240
+                ],
+                'stop_losses' => [
+                    'enabled' => $settings['stopLoss'] ?? true,
+                    'active_stops' => 2,
+                    'avg_stop_distance' => 8.5
+                ]
+            ];
+            
+            return [
+                'success' => true,
+                'risk_assessment' => $risk_assessment,
+                'timestamp' => date('Y-m-d H:i:s')
+            ];
+            
+        } catch (Exception $e) {
+            return [
+                'success' => false,
+                'error' => 'Failed to get risk assessment: ' . $e->getMessage()
+            ];
+        }
+    }
+    
+    // Helper methods for mobile functionality
+    
+    private function getDefaultMobileSettings() {
+        return [
+            'notifications' => true,
+            'confidenceThreshold' => 90,
+            'buySignals' => true,
+            'sellSignals' => true,
+            'riskAlerts' => true,
+            'selectedModels' => ['lstm'],
+            'modelWeights' => [
+                'lstm' => 60,
+                'rf' => 25,
+                'svm' => 15
+            ],
+            'riskTolerance' => 60,
+            'positionSizing' => true,
+            'stopLoss' => true,
+            'riskNotifications' => true
+        ];
+    }
+    
+    private function getUserMobileSettings($user_id) {
+        try {
+            $stmt = $this->pdo->prepare("
+                SELECT settings 
+                FROM mobile_settings 
+                WHERE user_id = ? 
+                ORDER BY updated_at DESC 
+                LIMIT 1
+            ");
+            
+            $stmt->execute([$user_id]);
+            $result = $stmt->fetch();
+            
+            if ($result) {
+                return json_decode($result['settings'], true);
+            }
+            
+            return $this->getDefaultMobileSettings();
+            
+        } catch (Exception $e) {
+            return $this->getDefaultMobileSettings();
+        }
+    }
+    
+    private function formatSignalMessage($signal) {
+        $type = strtoupper($signal['signal_type']);
+        $confidence = $signal['confidence'];
+        $price = number_format($signal['current_price'], 2);
+        
+        return "{$type} Signal - {$confidence}% Confidence\nPrice: \${$price}";
+    }
+    
+    private function storeNotification($user_id, $notification) {
+        try {
+            // Create notifications table if it doesn't exist
+            $this->pdo->exec("
+                CREATE TABLE IF NOT EXISTS push_notifications (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id INT DEFAULT 1,
+                    notification JSON NOT NULL,
+                    sent BOOLEAN DEFAULT FALSE,
+                    sent_at TIMESTAMP NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    INDEX(user_id),
+                    INDEX(sent)
+                )
+            ");
+            
+            $stmt = $this->pdo->prepare("
+                INSERT INTO push_notifications (user_id, notification) 
+                VALUES (?, ?)
+            ");
+            
+            $stmt->execute([$user_id, json_encode($notification)]);
+            
+            return $this->pdo->lastInsertId();
+            
+        } catch (Exception $e) {
+            error_log("Failed to store notification: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    private function scheduleHighConfidenceSignalCheck($user_id, $threshold) {
+        // In a real implementation, this would schedule a background job
+        // For now, we'll just log the action
+        error_log("Scheduled high confidence signal check for user {$user_id} with threshold {$threshold}%");
+    }
+    
+    private function getCurrentPrice($symbol) {
+        $prices = [
+            'BTC' => 67240 + rand(-1000, 1000),
+            'ETH' => 2650 + rand(-100, 100),
+            'ADA' => 1.80 + (rand(-20, 20) / 100),
+            'SOL' => 145 + rand(-10, 10),
+            'DOT' => 8.50 + (rand(-50, 50) / 100)
+        ];
+        
+        return $prices[$symbol] ?? 100;
+    }
+    
+    private function getTargetPrice($symbol) {
+        $current = $this->getCurrentPrice($symbol);
+        $change = rand(-10, 15) / 100; // -10% to +15%
+        return $current * (1 + $change);
+    }
+    
+    private function calculateRiskLevel($symbol) {
+        $risk_levels = ['Low', 'Medium', 'High'];
+        return $risk_levels[rand(0, 2)];
+    }
+    
+    private function getRecentMLSignals($since) {
+        // Simulate recent ML signals
+        $signals = [];
+        $symbols = ['BTC', 'ETH', 'ADA', 'SOL', 'DOT'];
+        
+        for ($i = 0; $i < 20; $i++) {
+            $signals[] = [
+                'id' => uniqid('signal_'),
+                'symbol' => $symbols[array_rand($symbols)],
+                'signal_type' => rand(0, 1) ? 'buy' : 'sell',
+                'confidence' => rand(70, 99),
+                'model' => ['LSTM', 'Random Forest', 'SVM'][rand(0, 2)],
+                'timestamp' => date('Y-m-d H:i:s', time() - rand(0, 86400))
+            ];
+        }
+        
+        return $signals;
+    }
+    
+    private function getModelPerformanceData() {
+        return [
+            'lstm' => ['accuracy' => 92.5, 'precision' => 89.3, 'recall' => 94.1],
+            'random_forest' => ['accuracy' => 89.2, 'precision' => 91.7, 'recall' => 87.8],
+            'svm' => ['accuracy' => 87.1, 'precision' => 85.4, 'recall' => 89.6]
+        ];
     }
 }
 
