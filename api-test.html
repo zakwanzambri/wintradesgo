@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WinTrades API Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f0f2f5; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .test-section { 
+            background: white; 
+            padding: 20px; 
+            margin: 20px 0; 
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .button { 
+            background: #2563eb; 
+            color: white; 
+            padding: 10px 20px; 
+            border: none; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            margin: 5px;
+        }
+        .button:hover { background: #1d4ed8; }
+        .result { 
+            background: #f8fafc; 
+            padding: 15px; 
+            margin: 10px 0; 
+            border-radius: 4px;
+            border-left: 4px solid #2563eb;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        .error { border-left-color: #dc2626; background: #fef2f2; }
+        .success { border-left-color: #16a34a; background: #f0fdf4; }
+        input { 
+            padding: 8px 12px; 
+            margin: 5px; 
+            border: 1px solid #d1d5db; 
+            border-radius: 4px;
+            width: 200px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 WinTrades API Testing Dashboard</h1>
+        
+        <div class="test-section">
+            <h2>1. Database Connection Test</h2>
+            <button class="button" onclick="testConnection()">Test Connection</button>
+            <div id="connectionResult" class="result" style="display:none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>2. User Authentication</h2>
+            <div>
+                <input type="email" id="loginEmail" placeholder="Email" value="demo@wintradesgo.com">
+                <input type="password" id="loginPassword" placeholder="Password" value="password">
+                <button class="button" onclick="testLogin()">Login</button>
+            </div>
+            <div>
+                <input type="email" id="regEmail" placeholder="New Email" value="test@example.com">
+                <input type="password" id="regPassword" placeholder="Password" value="newpassword">
+                <input type="text" id="regFirstName" placeholder="First Name" value="Test">
+                <input type="text" id="regLastName" placeholder="Last Name" value="User">
+                <button class="button" onclick="testRegister()">Register</button>
+            </div>
+            <div id="authResult" class="result" style="display:none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>3. Portfolio Data</h2>
+            <button class="button" onclick="testPortfolio()">Get Portfolio</button>
+            <div id="portfolioResult" class="result" style="display:none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>4. AI Signals</h2>
+            <button class="button" onclick="testSignals()">Get AI Signals</button>
+            <div id="signalsResult" class="result" style="display:none;"></div>
+        </div>
+    </div>
+
+    <script>
+        let authToken = null;
+
+        async function apiCall(endpoint, method = 'GET', data = null) {
+            const options = {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                }
+            };
+
+            if (authToken) {
+                options.headers['Authorization'] = `Bearer ${authToken}`;
+            }
+
+            if (data) {
+                options.body = JSON.stringify(data);
+            }
+
+            try {
+                const response = await fetch(`http://localhost:8000/api/${endpoint}`, options);
+                const result = await response.json();
+                return { status: response.status, data: result };
+            } catch (error) {
+                return { status: 0, data: { error: error.message } };
+            }
+        }
+
+        function showResult(elementId, result, isError = false) {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.className = `result ${isError ? 'error' : 'success'}`;
+            element.textContent = JSON.stringify(result, null, 2);
+        }
+
+        async function testConnection() {
+            const result = await apiCall('test-connection.php');
+            showResult('connectionResult', result, result.status !== 200);
+        }
+
+        async function testLogin() {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            
+            const result = await apiCall('auth/login.php', 'POST', { email, password });
+            
+            if (result.status === 200 && result.data.token) {
+                authToken = result.data.token;
+            }
+            
+            showResult('authResult', result, result.status !== 200);
+        }
+
+        async function testRegister() {
+            const email = document.getElementById('regEmail').value;
+            const password = document.getElementById('regPassword').value;
+            const firstName = document.getElementById('regFirstName').value;
+            const lastName = document.getElementById('regLastName').value;
+            
+            const result = await apiCall('auth/register.php', 'POST', {
+                email, password, first_name: firstName, last_name: lastName
+            });
+            
+            showResult('authResult', result, result.status !== 201);
+        }
+
+        async function testPortfolio() {
+            if (!authToken) {
+                showResult('portfolioResult', { error: 'Please login first' }, true);
+                return;
+            }
+            
+            const result = await apiCall('portfolio/get.php');
+            showResult('portfolioResult', result, result.status !== 200);
+        }
+
+        async function testSignals() {
+            const result = await apiCall('signals/get.php');
+            showResult('signalsResult', result, result.status !== 200);
+        }
+    </script>
+</body>
+</html>

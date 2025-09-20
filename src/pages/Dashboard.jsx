@@ -28,13 +28,53 @@ import {
   Pie,
   Cell
 } from 'recharts'
+import API from '../utils/api'
 
 const Dashboard = () => {
   const [selectedTimeframe, setSelectedTimeframe] = useState('24h')
   const [marketData, setMarketData] = useState([])
   const [sentimentData, setSentimentData] = useState([])
+  const [portfolio, setPortfolio] = useState(null)
+  const [aiSignals, setAiSignals] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
-  // Generate mock data
+  // Load real data from API
+  useEffect(() => {
+    const loadDashboardData = async () => {
+      try {
+        setLoading(true)
+        
+        // Load portfolio data
+        const portfolioResult = await API.portfolio.getPortfolio()
+        if (portfolioResult.success) {
+          setPortfolio(portfolioResult.data)
+        }
+        
+        // Load AI signals  
+        const signalsResult = await fetch('http://localhost:8000/api/signals/get.php')
+        const signalsData = await signalsResult.json()
+        if (signalsData.success) {
+          setAiSignals(signalsData.data.signals || [])
+        }
+        
+        setError(null)
+      } catch (err) {
+        console.error('Failed to load dashboard data:', err)
+        setError('Failed to load dashboard data')
+      } finally {
+        setLoading(false)
+      }
+    }
+    
+    loadDashboardData()
+    
+    // Refresh data every 30 seconds
+    const interval = setInterval(loadDashboardData, 30000)
+    return () => clearInterval(interval)
+  }, [])
+
+  // Generate mock chart data
   useEffect(() => {
     const generateMarketData = () => {
       const data = []
@@ -105,32 +145,8 @@ const Dashboard = () => {
     }
   ]
 
-  const signals = [
-    {
-      type: 'BUY',
-      symbol: 'BTC',
-      confidence: 87,
-      timeframe: '4h',
-      reason: 'Bullish divergence detected',
-      timestamp: '2 mins ago'
-    },
-    {
-      type: 'SELL',
-      symbol: 'ETH',
-      confidence: 72,
-      timeframe: '1h',
-      reason: 'Resistance level reached',
-      timestamp: '15 mins ago'
-    },
-    {
-      type: 'HOLD',
-      symbol: 'ADA',
-      confidence: 65,
-      timeframe: '1d',
-      reason: 'Consolidation phase',
-      timestamp: '1 hour ago'
-    }
-  ]
+  // Use real AI signals data (loaded from API)
+  // Mock signals are replaced by real data from aiSignals state
 
   const portfolioStats = [
     {
@@ -350,16 +366,16 @@ const Dashboard = () => {
                 </h3>
               </div>
               <div className="space-y-3">
-                {signals.map((signal, index) => (
-                  <div key={index} className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
+                {(aiSignals.length > 0 ? aiSignals : []).map((signal, index) => (
+                  <div key={signal.id || index} className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center space-x-2">
                         <span className={`px-2 py-1 text-xs font-medium rounded ${
-                          signal.type === 'BUY' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
-                          signal.type === 'SELL' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' :
+                          signal.signal_type === 'BUY' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
+                          signal.signal_type === 'SELL' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' :
                           'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
                         }`}>
-                          {signal.type}
+                          {signal.signal_type}
                         </span>
                         <span className="font-medium text-gray-900 dark:text-white">
                           {signal.symbol}
@@ -373,10 +389,15 @@ const Dashboard = () => {
                       {signal.reason}
                     </div>
                     <div className="text-xs text-gray-500">
-                      {signal.timeframe} • {signal.timestamp}
+                      {signal.timeframe} • {signal.minutes_ago < 60 ? `${signal.minutes_ago} mins ago` : `${Math.floor(signal.minutes_ago / 60)} hours ago`}
                     </div>
                   </div>
                 ))}
+                {aiSignals.length === 0 && !loading && (
+                  <div className="text-center text-gray-500 py-4">
+                    No AI signals available
+                  </div>
+                )}
               </div>
             </div>
 

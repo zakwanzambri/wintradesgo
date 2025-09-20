@@ -3,7 +3,7 @@
  * Handles communication between React app and PHP backend
  */
 
-const API_BASE_URL = 'http://localhost/wintradesgo/api';
+const API_BASE_URL = 'http://localhost:8000/api';
 
 // Authentication token management
 class AuthManager {
