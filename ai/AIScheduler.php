@@ -33,9 +33,11 @@ class AIScheduler {
         $this->isRunning = true;
         $this->log("🚀 AI Scheduler started with {$intervalMinutes} minute intervals");
         
-        // Handle graceful shutdown
-        pcntl_signal(SIGTERM, [$this, 'shutdown']);
-        pcntl_signal(SIGINT, [$this, 'shutdown']);
+        // Handle graceful shutdown (skip on Windows where PCNTL isn't available)
+        if (function_exists('pcntl_signal')) {
+            pcntl_signal(SIGTERM, [$this, 'shutdown']);
+            pcntl_signal(SIGINT, [$this, 'shutdown']);
+        }
         
         while ($this->isRunning) {
             try {
@@ -66,8 +68,10 @@ class AIScheduler {
                     ));
                 }
                 
-                // Check for process control signals
-                pcntl_signal_dispatch();
+                // Check for process control signals (if available)
+                if (function_exists('pcntl_signal_dispatch')) {
+                    pcntl_signal_dispatch();
+                }
                 
                 // Wait for next interval
                 if ($this->isRunning) {
