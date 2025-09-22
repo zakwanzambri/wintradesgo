@@ -235,49 +235,43 @@ const Dashboard = () => {
 
   // AI Signals Component
   const AISignalsTab = () => (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <div className="flex justify-between items-center">
-            <h1 className="text-3xl font-bold text-gray-900">AI Trading Signals</h1>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <label className="flex items-center gap-2 text-sm text-gray-600">
-                  <input
-                    type="checkbox"
-                    checked={autoRefreshEnabled}
-                    onChange={(e) => setAutoRefreshEnabled(e.target.checked)}
-                    className="rounded"
-                  />
-                  Auto-refresh
-                </label>
-                {autoRefreshEnabled && (
-                  <span className="text-xs text-gray-500">
-                    Next: {signalsCountdown}s
-                  </span>
-                )}
-              </div>
-              <button
-                onClick={() => {
-                  fetchAISignals();
-                  setSignalsCountdown(30); // Reset countdown
-                }}
-                disabled={loading}
-                className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {loading ? 'Loading...' : 'Refresh Now'}
-              </button>
-            </div>
+    <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="flex justify-between items-center mb-6">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <label className="flex items-center gap-2 text-sm text-gray-600">
+              <input
+                type="checkbox"
+                checked={autoRefreshEnabled}
+                onChange={(e) => setAutoRefreshEnabled(e.target.checked)}
+                className="rounded"
+              />
+              Auto-refresh
+            </label>
+            {autoRefreshEnabled && (
+              <span className="text-xs text-gray-500">
+                Next: {signalsCountdown}s
+              </span>
+            )}
           </div>
+          <button
+            onClick={() => {
+              fetchAISignals();
+              setSignalsCountdown(30); // Reset countdown
+            }}
+            disabled={loading}
+            className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {loading ? 'Loading...' : 'Refresh Now'}
+          </button>
         </div>
       </div>
       
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white rounded-lg border p-6 shadow-sm">
-            <p className="text-sm font-medium text-gray-700 mb-2">Total Signals</p>
-            <p className="text-3xl font-bold text-gray-900">{aiSignals.length}</p>
-          </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="bg-white rounded-lg border p-6 shadow-sm">
+          <p className="text-sm font-medium text-gray-700 mb-2">Total Signals</p>
+          <p className="text-3xl font-bold text-gray-900">{aiSignals.length}</p>
+        </div>
           <div className="bg-white rounded-lg border p-6 shadow-sm">
             <p className="text-sm font-medium text-gray-700 mb-2">Buy Signals</p>
             <p className="text-3xl font-bold text-green-600">
@@ -368,50 +362,44 @@ const Dashboard = () => {
     const totalPnLPercentage = totalValue > 0 ? (totalPnL / (totalValue - totalPnL)) * 100 : 0;
 
     return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="bg-white border-b shadow-sm">
-          <div className="max-w-7xl mx-auto px-4 py-6">
-            <div className="flex justify-between items-center">
-              <h1 className="text-3xl font-bold text-gray-900">Portfolio Tracker</h1>
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <label className="flex items-center gap-2 text-sm text-gray-600">
-                    <input
-                      type="checkbox"
-                      checked={autoRefreshEnabled}
-                      onChange={(e) => setAutoRefreshEnabled(e.target.checked)}
-                      className="rounded"
-                    />
-                    Auto-refresh
-                  </label>
-                  {autoRefreshEnabled && (
-                    <span className="text-xs text-gray-500">
-                      Next: {portfolioCountdown}s
-                    </span>
-                  )}
-                </div>
-                <button
-                  onClick={() => {
-                    fetchPortfolioData();
-                    setPortfolioCountdown(60); // Reset countdown
-                  }}
-                  disabled={portfolioLoading}
-                  className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  {portfolioLoading ? 'Loading...' : 'Refresh Now'}
-                </button>
-              </div>
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="flex justify-between items-center mb-6">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <label className="flex items-center gap-2 text-sm text-gray-600">
+                <input
+                  type="checkbox"
+                  checked={autoRefreshEnabled}
+                  onChange={(e) => setAutoRefreshEnabled(e.target.checked)}
+                  className="rounded"
+                />
+                Auto-refresh
+              </label>
+              {autoRefreshEnabled && (
+                <span className="text-xs text-gray-500">
+                  Next: {portfolioCountdown}s
+                </span>
+              )}
             </div>
+            <button
+              onClick={() => {
+                fetchPortfolioData();
+                setPortfolioCountdown(60); // Reset countdown
+              }}
+              disabled={portfolioLoading}
+              className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {portfolioLoading ? 'Loading...' : 'Refresh Now'}
+            </button>
           </div>
         </div>
 
-        <div className="max-w-7xl mx-auto px-4 py-8">
-          {/* Portfolio Summary */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <div className="bg-white rounded-lg border p-6 shadow-sm">
-              <p className="text-sm font-medium text-gray-700 mb-2">Total Value</p>
-              <p className="text-3xl font-bold text-gray-900">${totalValue.toLocaleString()}</p>
-            </div>
+        {/* Portfolio Summary */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <div className="bg-white rounded-lg border p-6 shadow-sm">
+            <p className="text-sm font-medium text-gray-700 mb-2">Total Value</p>
+            <p className="text-3xl font-bold text-gray-900">${totalValue.toLocaleString()}</p>
+          </div>
             <div className="bg-white rounded-lg border p-6 shadow-sm">
               <p className="text-sm font-medium text-gray-700 mb-2">Total P&L</p>
               <p className={`text-3xl font-bold ${totalPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
@@ -499,50 +487,44 @@ const Dashboard = () => {
 
   // Pattern Recognition Component
   const PatternsTab = () => (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <div className="flex justify-between items-center">
-            <h1 className="text-3xl font-bold text-gray-900">Pattern Recognition</h1>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <label className="flex items-center gap-2 text-sm text-gray-600">
-                  <input
-                    type="checkbox"
-                    checked={autoRefreshEnabled}
-                    onChange={(e) => setAutoRefreshEnabled(e.target.checked)}
-                    className="rounded"
-                  />
-                  Auto-refresh
-                </label>
-                {autoRefreshEnabled && (
-                  <span className="text-xs text-gray-500">
-                    Next: {patternsCountdown}s
-                  </span>
-                )}
-              </div>
-              <button
-                onClick={() => {
-                  fetchPatternData();
-                  setPatternsCountdown(45); // Reset countdown
-                }}
-                disabled={patternLoading}
-                className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {patternLoading ? 'Loading...' : 'Refresh Now'}
-              </button>
-            </div>
+    <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="flex justify-between items-center mb-6">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <label className="flex items-center gap-2 text-sm text-gray-600">
+              <input
+                type="checkbox"
+                checked={autoRefreshEnabled}
+                onChange={(e) => setAutoRefreshEnabled(e.target.checked)}
+                className="rounded"
+              />
+              Auto-refresh
+            </label>
+            {autoRefreshEnabled && (
+              <span className="text-xs text-gray-500">
+                Next: {patternsCountdown}s
+              </span>
+            )}
           </div>
+          <button
+            onClick={() => {
+              fetchPatternData();
+              setPatternsCountdown(45); // Reset countdown
+            }}
+            disabled={patternLoading}
+            className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {patternLoading ? 'Loading...' : 'Refresh Now'}
+          </button>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Pattern Summary */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-lg border p-6 shadow-sm">
-            <p className="text-sm font-medium text-gray-700 mb-2">Total Patterns</p>
-            <p className="text-3xl font-bold text-gray-900">{patternData.length}</p>
-          </div>
+      {/* Pattern Summary */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="bg-white rounded-lg border p-6 shadow-sm">
+          <p className="text-sm font-medium text-gray-700 mb-2">Total Patterns</p>
+          <p className="text-3xl font-bold text-gray-900">{patternData.length}</p>
+        </div>
           <div className="bg-white rounded-lg border p-6 shadow-sm">
             <p className="text-sm font-medium text-gray-700 mb-2">Bullish Patterns</p>
             <p className="text-3xl font-bold text-green-600">
