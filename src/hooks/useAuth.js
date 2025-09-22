@@ -1,23 +1,13 @@
-/**
- * Authentication Hooks for WinTrades
- * React hooks for managing user authentication state and operations
- */
-
 import { useState, useEffect, useContext, createContext, useCallback } from 'react';
 import authService from '../services/authService';
 
-// Auth Context
 const AuthContext = createContext(null);
 
-/**
- * Auth Provider Component
- */
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // Initialize auth state
   useEffect(() => {
     const initAuth = async () => {
       try {
@@ -112,9 +102,6 @@ export function AuthProvider({ children }) {
   );
 }
 
-/**
- * Use Auth Hook
- */
 export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) {
@@ -123,9 +110,6 @@ export function useAuth() {
   return context;
 }
 
-/**
- * Login Hook
- */
 export function useLogin() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -136,14 +120,10 @@ export function useLogin() {
     
     try {
       const result = await authService.login(credentials);
-      if (!result.success) {
-        setError(result.error);
-      }
       return result;
     } catch (error) {
-      const errorMessage = 'Login failed: ' + error.message;
-      setError(errorMessage);
-      return { success: false, error: errorMessage };
+      setError(error.message);
+      return { success: false, error: error.message };
     } finally {
       setLoading(false);
     }
@@ -152,9 +132,6 @@ export function useLogin() {
   return { login, loading, error };
 }
 
-/**
- * Registration Hook
- */
 export function useRegister() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -165,14 +142,10 @@ export function useRegister() {
     
     try {
       const result = await authService.register(userData);
-      if (!result.success) {
-        setError(result.error);
-      }
       return result;
     } catch (error) {
-      const errorMessage = 'Registration failed: ' + error.message;
-      setError(errorMessage);
-      return { success: false, error: errorMessage };
+      setError(error.message);
+      return { success: false, error: error.message };
     } finally {
       setLoading(false);
     }
@@ -181,78 +154,4 @@ export function useRegister() {
   return { register, loading, error };
 }
 
-/**
- * User Profile Hook
- */
-export function useProfile() {
-  const { user, updateUser } = useAuth();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-
-  const refreshProfile = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const result = await authService.getProfile();
-      if (result.success) {
-        updateUser(result.user);
-      } else {
-        setError(result.error);
-      }
-      return result;
-    } catch (error) {
-      const errorMessage = 'Failed to load profile: ' + error.message;
-      setError(errorMessage);
-      return { success: false, error: errorMessage };
-    } finally {
-      setLoading(false);
-    }
-  }, [updateUser]);
-
-  return {
-    user,
-    loading,
-    error,
-    refreshProfile,
-    displayName: authService.getUserDisplayName(),
-    avatar: authService.getUserAvatar()
-  };
-}
-
-/**
- * Protected Route Hook
- */
-export function useProtectedRoute(requiredRole = null) {
-  const { isAuthenticated, user, loading } = useAuth();
-  
-  const isAuthorized = useCallback(() => {
-    if (!isAuthenticated) return false;
-    if (!requiredRole) return true;
-    return user && user.role === requiredRole;
-  }, [isAuthenticated, user, requiredRole]);
-
-  return {
-    isAuthenticated,
-    isAuthorized: isAuthorized(),
-    loading,
-    user
-  };
-}
-
-/**
- * Auth Status Hook
- */
-export function useAuthStatus() {
-  const { isAuthenticated, user, loading } = useAuth();
-  
-  return {
-    isAuthenticated,
-    isGuest: !isAuthenticated,
-    isUser: isAuthenticated && user?.role === 'user',
-    isPremium: isAuthenticated && user?.role === 'premium',
-    isAdmin: isAuthenticated && user?.role === 'admin',
-    user,
-    loading
-  };
-}
+export default useAuth;
