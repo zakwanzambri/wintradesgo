@@ -13,96 +13,155 @@ const Dashboard = () => {
   const [portfolioCountdown, setPortfolioCountdown] = useState(60);
   const [patternsCountdown, setPatternsCountdown] = useState(45);
   const [marketPrices, setMarketPrices] = useState({});
+  const [priceLoading, setPriceLoading] = useState(false);
+  const [priceError, setPriceError] = useState(null);
 
-  // Function to fetch real-time crypto prices
+  // Function to fetch real-time crypto prices with EXTRA SAFETY
   const fetchMarketPrices = async () => {
+    // Prevent multiple simultaneous calls
+    if (priceLoading) {
+      console.log('⏳ Price fetch already in progress, skipping...');
+      return marketPrices;
+    }
+
+    setPriceLoading(true);
+    setPriceError(null);
+    console.log('🔄 Fetching real-time prices from CoinGecko...');
+    
     try {
-      const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,cardano&vs_currencies=usd');
+      // Add timeout to prevent hanging
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
+      const response = await fetch(
+        'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,cardano&vs_currencies=usd',
+        { 
+          signal: controller.signal,
+          headers: {
+            'Accept': 'application/json',
+          }
+        }
+      );
+      
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
       const data = await response.json();
+      console.log('✅ CoinGecko API Response:', data);
+      
+      // Validate response data
+      if (!data || typeof data !== 'object') {
+        throw new Error('Invalid response format from CoinGecko');
+      }
       
       const prices = {
-        BTC: data.bitcoin?.usd || 43250,
-        ETH: data.ethereum?.usd || 2650,
-        ADA: data.cardano?.usd || 0.385
+        BTC: data.bitcoin?.usd || null,
+        ETH: data.ethereum?.usd || null,
+        ADA: data.cardano?.usd || null
       };
       
+      // Check if we got valid prices
+      if (!prices.BTC || !prices.ETH || !prices.ADA) {
+        throw new Error('Incomplete price data received');
+      }
+      
+      console.log('💰 Parsed Prices:', prices);
       setMarketPrices(prices);
+      setPriceError(null);
       return prices;
+      
     } catch (error) {
-      console.error('Error fetching market prices:', error);
-      // Fallback prices if API fails
-      const fallbackPrices = {
-        BTC: 43250,
-        ETH: 4183, // Updated to match your observation
-        ADA: 0.385
-      };
-      setMarketPrices(fallbackPrices);
-      return fallbackPrices;
+      console.error('❌ Error fetching market prices:', error.message);
+      
+      let errorMessage = 'Failed to fetch prices';
+      if (error.name === 'AbortError') {
+        errorMessage = 'Request timeout - API too slow';
+      } else if (error.message.includes('CORS')) {
+        errorMessage = 'CORS policy blocked request';
+      } else if (error.message.includes('Failed to fetch')) {
+        errorMessage = 'Network connection failed';
+      }
+      
+      setPriceError(errorMessage);
+      
+      // Keep existing prices if we have them, don't clear them
+      if (Object.keys(marketPrices).length === 0) {
+        console.log('🔄 No existing prices, showing error state...');
+        setMarketPrices({});
+      } else {
+        console.log('💾 Keeping existing prices during error:', marketPrices);
+      }
+      
+      return marketPrices;
+    } finally {
+      setPriceLoading(false);
     }
   };
 
   // Function to fetch AI signals
   const fetchAISignals = async () => {
     setLoading(true);
+    console.log('🤖 Fetching AI signals...');
+    
     try {
-      // Get current market prices first
+      // Get current market prices first - this is crucial
       const currentPrices = await fetchMarketPrices();
       
       const response = await fetch('http://localhost/wintradesgo/api/trading/production.php?action=ml_signals');
       const data = await response.json();
+      
       if (data.success && data.data && data.data.current_signals) {
+        console.log('✅ Got signals from API:', data.data.current_signals);
         setAiSignals(data.data.current_signals);
       } else {
-        // Fallback with real-time prices
+        console.log('⚠️ No API signals, using demo signals');
+        // Demo signals without hardcoded prices - let the component handle pricing
         setAiSignals([
           { 
             symbol: 'BTC', 
             signal_type: 'BUY', 
             confidence: 85, 
-            generated_at: '2025-09-22 10:02:42',
-            current_price: currentPrices.BTC
+            generated_at: '2025-09-22 10:02:42'
           },
           { 
             symbol: 'ETH', 
             signal_type: 'BUY', 
             confidence: 83, 
-            generated_at: '2025-09-22 10:02:42',
-            current_price: currentPrices.ETH
+            generated_at: '2025-09-22 10:02:42'
           },
           { 
             symbol: 'ADA', 
             signal_type: 'HOLD', 
             confidence: 72, 
-            generated_at: '2025-09-22 10:02:42',
-            current_price: currentPrices.ADA
+            generated_at: '2025-09-22 10:02:42'
           }
         ]);
       }
     } catch (error) {
-      console.error('Error fetching AI signals:', error);
-      // Get current prices even if API fails
+      console.error('❌ Error fetching AI signals:', error);
+      // Even in error, don't hardcode prices - let the API handle it
       const currentPrices = await fetchMarketPrices();
       setAiSignals([
         { 
           symbol: 'BTC', 
           signal_type: 'BUY', 
           confidence: 85, 
-          generated_at: '2025-09-22 10:02:42',
-          current_price: currentPrices.BTC
+          generated_at: '2025-09-22 10:02:42'
         },
         { 
           symbol: 'ETH', 
           signal_type: 'BUY', 
           confidence: 83, 
-          generated_at: '2025-09-22 10:02:42',
-          current_price: currentPrices.ETH
+          generated_at: '2025-09-22 10:02:42'
         },
         { 
           symbol: 'ADA', 
           signal_type: 'HOLD', 
           confidence: 72, 
-          generated_at: '2025-09-22 10:02:42',
-          current_price: currentPrices.ADA
+          generated_at: '2025-09-22 10:02:42'
         }
       ]);
     }
@@ -364,40 +423,112 @@ const Dashboard = () => {
                 </div>
               ) : aiSignals.length > 0 ? (
                 <div className="space-y-6 p-6">
+                  {/* Price Status Banner */}
+                  {priceLoading && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                      <div className="flex items-center gap-2">
+                        <div className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+                        <p className="text-blue-800 font-medium">Fetching real-time prices from CoinGecko...</p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {priceError && (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                      <div className="flex items-center gap-2">
+                        <span className="text-yellow-600">⚠️</span>
+                        <p className="text-yellow-800 font-medium">Price API Issue: {priceError}</p>
+                        <button 
+                          onClick={() => fetchMarketPrices()} 
+                          className="ml-auto px-3 py-1 bg-yellow-600 text-white rounded text-sm hover:bg-yellow-700"
+                        >
+                          Retry
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   {aiSignals.map((signal, index) => {
-                    // Get current market price for this symbol
-                    const currentPrice = signal.current_price || marketPrices[signal.symbol] || 
-                      (signal.symbol === 'BTC' ? 43250 : signal.symbol === 'ETH' ? 4183 : 0.385);
+                    // SAFE price handling - prevent crashes
+                    const currentPrice = marketPrices[signal.symbol];
+                    const hasPriceData = currentPrice && typeof currentPrice === 'number' && currentPrice > 0;
                     
-                    // Calculate dynamic entry/target/stop based on current price and signal type
+                    // If no price data available, show loading state SAFELY
+                    if (!hasPriceData) {
+                      return (
+                        <div key={index} className="border rounded-lg p-6 bg-gray-50">
+                          <div className="flex justify-between items-center mb-4">
+                            <div className="flex items-center gap-3">
+                              <h3 className="text-2xl font-bold text-gray-900">
+                                {signal.symbol} - {signal.signal_type?.toUpperCase() || 'UNKNOWN'}
+                              </h3>
+                              <div className="px-3 py-1 rounded-md text-sm font-medium bg-gray-200 text-gray-700">
+                                {signal.signal_type?.toUpperCase() || 'UNKNOWN'}
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="text-center py-8">
+                            <div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"></div>
+                            <p className="text-gray-600 font-medium">⏳ Loading real-time price for {signal.symbol}...</p>
+                            <p className="text-sm text-gray-500 mt-2">
+                              {priceLoading ? 'Fetching from CoinGecko API...' : priceError ? 'API Error - Click retry above' : 'Waiting for price data...'}
+                            </p>
+                            
+                            {/* Show available signal info while waiting */}
+                            <div className="mt-6 p-4 bg-white rounded border">
+                              <div className="grid grid-cols-2 gap-4 text-sm">
+                                <div>
+                                  <p className="font-medium text-gray-500">CONFIDENCE</p>
+                                  <p className="font-bold text-gray-900">{signal.confidence || 'N/A'}%</p>
+                                </div>
+                                <div>
+                                  <p className="font-medium text-gray-500">GENERATED</p>
+                                  <p className="font-bold text-gray-700">{signal.generated_at || 'Unknown'}</p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }
+                    
+                    // SAFE calculation with validation
                     let entryPrice, targetPrice, stopLoss;
                     
-                    if (signal.signal_type?.toLowerCase() === 'buy') {
-                      entryPrice = currentPrice;
-                      targetPrice = currentPrice * 1.06; // 6% target gain
-                      stopLoss = currentPrice * 0.97; // 3% stop loss
-                    } else if (signal.signal_type?.toLowerCase() === 'sell') {
-                      entryPrice = currentPrice;
-                      targetPrice = currentPrice * 0.94; // 6% target (short)
-                      stopLoss = currentPrice * 1.03; // 3% stop loss (short)
-                    } else { // HOLD
-                      entryPrice = currentPrice;
-                      targetPrice = currentPrice * 1.03; // 3% conservative target
-                      stopLoss = currentPrice * 0.985; // 1.5% conservative stop
+                    try {
+                      if (signal.signal_type?.toLowerCase() === 'buy') {
+                        entryPrice = currentPrice;
+                        targetPrice = Number((currentPrice * 1.06).toFixed(2)); // 6% target gain
+                        stopLoss = Number((currentPrice * 0.97).toFixed(2)); // 3% stop loss
+                      } else if (signal.signal_type?.toLowerCase() === 'sell') {
+                        entryPrice = currentPrice;
+                        targetPrice = Number((currentPrice * 0.94).toFixed(2)); // 6% target (short)
+                        stopLoss = Number((currentPrice * 1.03).toFixed(2)); // 3% stop loss (short)
+                      } else { // HOLD or unknown
+                        entryPrice = currentPrice;
+                        targetPrice = Number((currentPrice * 1.03).toFixed(2)); // 3% conservative target
+                        stopLoss = Number((currentPrice * 0.985).toFixed(2)); // 1.5% conservative stop
+                      }
+                    } catch (calcError) {
+                      console.error('❌ Price calculation error:', calcError);
+                      // Fallback to current price if calculation fails
+                      entryPrice = targetPrice = stopLoss = currentPrice;
                     }
 
-                    // Enhanced signal data with real-time prices
+                    // Enhanced signal data with SAFE real-time prices
                     const enhancedSignal = {
                       ...signal,
                       currentPrice: currentPrice,
                       entryPrice: entryPrice,
                       targetPrice: targetPrice,
                       stopLoss: stopLoss,
-                      strength: signal.confidence > 85 ? 'STRONG' : signal.confidence > 70 ? 'MEDIUM' : 'WEAK',
+                      strength: (signal.confidence && signal.confidence > 85) ? 'STRONG' : 
+                               (signal.confidence && signal.confidence > 70) ? 'MEDIUM' : 'WEAK',
                       source: signal.symbol === 'BTC' ? 'LSTM + Pattern Recognition' : 
                              signal.symbol === 'ETH' ? 'LSTM + Volume Analysis' : 
                              'Pattern Recognition',
-                      generated_at: '2025-09-22 10:28:03'
+                      generated_at: signal.generated_at || new Date().toLocaleString()
                     };
 
                     return (
@@ -486,26 +617,49 @@ const Dashboard = () => {
                           </div>
                         </div>
 
-                        {/* Risk/Reward Calculation */}
+                        {/* Risk/Reward Calculation - SAFE MATH */}
                         <div className="border-t pt-4 mt-4">
                           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                             <div>
                               <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Risk/Reward</p>
                               <p className="text-sm font-semibold text-gray-900">
-                                1:{((enhancedSignal.targetPrice - enhancedSignal.entryPrice) / 
-                                   (enhancedSignal.entryPrice - enhancedSignal.stopLoss)).toFixed(2)}
+                                {(() => {
+                                  try {
+                                    const reward = enhancedSignal.targetPrice - enhancedSignal.entryPrice;
+                                    const risk = enhancedSignal.entryPrice - enhancedSignal.stopLoss;
+                                    if (risk <= 0) return '∞:1'; // Avoid division by zero
+                                    const ratio = (reward / risk).toFixed(2);
+                                    return `1:${ratio}`;
+                                  } catch (e) {
+                                    return '1:1';
+                                  }
+                                })()}
                               </p>
                             </div>
                             <div>
                               <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Potential Gain</p>
                               <p className="text-sm font-semibold text-green-600">
-                                {(((enhancedSignal.targetPrice - enhancedSignal.entryPrice) / enhancedSignal.entryPrice) * 100).toFixed(1)}%
+                                {(() => {
+                                  try {
+                                    const gain = ((enhancedSignal.targetPrice - enhancedSignal.entryPrice) / enhancedSignal.entryPrice) * 100;
+                                    return isFinite(gain) ? `${gain.toFixed(1)}%` : '0.0%';
+                                  } catch (e) {
+                                    return '0.0%';
+                                  }
+                                })()}
                               </p>
                             </div>
                             <div>
                               <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Max Risk</p>
                               <p className="text-sm font-semibold text-red-600">
-                                {(((enhancedSignal.entryPrice - enhancedSignal.stopLoss) / enhancedSignal.entryPrice) * 100).toFixed(1)}%
+                                {(() => {
+                                  try {
+                                    const risk = ((enhancedSignal.entryPrice - enhancedSignal.stopLoss) / enhancedSignal.entryPrice) * 100;
+                                    return isFinite(risk) && risk >= 0 ? `${risk.toFixed(1)}%` : '0.0%';
+                                  } catch (e) {
+                                    return '0.0%';
+                                  }
+                                })()}
                               </p>
                             </div>
                           </div>
