@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext, createContext, useCallback } from 'react';
+import { useState, useEffect, useContext, createContext, useCallback, createElement } from 'react';
 import authService from '../services/authService';
 
 const AuthContext = createContext(null);
@@ -95,11 +95,7 @@ export function AuthProvider({ children }) {
     updateUser
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return createElement(AuthContext.Provider, { value }, children);
 }
 
 export function useAuth() {
