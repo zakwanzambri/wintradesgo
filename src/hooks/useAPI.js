@@ -118,11 +118,16 @@ export function useAISignals(options = {}) {
     {
       refreshInterval,
       transform: (data) => {
-        // Sort signals by confidence (highest first)
-        if (data?.signals) {
+        // Transform real API data structure
+        if (data?.current_signals) {
           return {
-            ...data,
-            signals: data.signals.sort((a, b) => b.confidence - a.confidence)
+            signals: data.current_signals.sort((a, b) => b.confidence - a.confidence),
+            lstm_predictions: data.lstm_predictions,
+            pattern_recognition: data.pattern_recognition,
+            signal_strength: data.signal_strength,
+            market_sentiment: data.market_sentiment,
+            confidence_score: data.confidence_score,
+            last_updated: data.last_updated
           };
         }
         return data;
@@ -144,23 +149,33 @@ export function usePatternRecognition(options = {}) {
     {
       refreshInterval,
       transform: (data) => {
-        // Process pattern data for easier consumption
-        const processedPatterns = {};
-        
-        Object.keys(data || {}).forEach(symbol => {
-          if (data[symbol]?.detected_patterns) {
-            processedPatterns[symbol] = {
-              ...data[symbol],
-              detected_patterns: data[symbol].detected_patterns.map(pattern => ({
-                ...pattern,
-                symbol,
-                id: `${symbol}_${pattern.pattern}_${Date.now()}`
-              }))
-            };
-          }
-        });
-        
-        return processedPatterns;
+        // Process real API pattern data structure
+        if (data?.patterns) {
+          const processedPatterns = {};
+          
+          Object.keys(data.patterns).forEach(symbol => {
+            if (data.patterns[symbol]?.detected_patterns) {
+              processedPatterns[symbol] = {
+                ...data.patterns[symbol],
+                detected_patterns: data.patterns[symbol].detected_patterns.map(pattern => ({
+                  ...pattern,
+                  symbol,
+                  id: `${symbol}_${pattern.pattern}_${Date.now()}`
+                }))
+              };
+            }
+          });
+          
+          return {
+            patterns: processedPatterns,
+            total_patterns_detected: data.total_patterns_detected,
+            high_confidence_patterns: data.high_confidence_patterns,
+            pattern_accuracy: data.pattern_accuracy,
+            last_scan: data.last_scan,
+            scan_frequency: data.scan_frequency
+          };
+        }
+        return data;
       },
       ...restOptions
     }
@@ -178,6 +193,19 @@ export function usePortfolio(options = {}) {
     [],
     {
       refreshInterval,
+      transform: (data) => ({
+        total_value: data?.portfolio_value || 100000,
+        cash_balance: data?.cash_balance || 100000,
+        invested_amount: data?.invested_amount || 0,
+        open_positions: data?.open_positions || 0,
+        trading_stats: data?.trading_stats || {
+          total_trades: 0,
+          winning_trades: 0,
+          win_rate: 0,
+          avg_profit_loss: 0
+        },
+        positions_breakdown: data?.positions_breakdown || []
+      }),
       ...restOptions
     }
   );
@@ -397,11 +425,17 @@ export function usePortfolioData(options = {}) {
   const portfolio = useAPI(() => apiService.getPortfolioSummary(), [], {
     refreshInterval,
     transform: (data) => ({
-      total_value: data?.total_value || 125420,
-      daily_change: data?.daily_change || 3247.89,
-      daily_change_percent: data?.daily_change_percent || 2.67,
-      daily_pnl: data?.daily_pnl || 1847.32,
-      daily_pnl_percent: data?.daily_pnl_percent || 1.49
+      total_value: data?.portfolio_value || 100000,
+      cash_balance: data?.cash_balance || 100000,
+      invested_amount: data?.invested_amount || 0,
+      open_positions: data?.open_positions || 0,
+      trading_stats: data?.trading_stats || {
+        total_trades: 0,
+        winning_trades: 0,
+        win_rate: 0,
+        avg_profit_loss: 0
+      },
+      positions_breakdown: data?.positions_breakdown || []
     })
   });
 

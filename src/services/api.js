@@ -135,7 +135,7 @@ class WinTradesAPI {
     }
 
     try {
-      const response = await this.request('/trading/production.php?action=get_signals');
+      const response = await this.request('/trading/production.php?action=ml_signals');
       this.setCache(cacheKey, response.data);
       return response;
     } catch (error) {
@@ -206,7 +206,7 @@ class WinTradesAPI {
    */
   async getPortfolioSummary() {
     try {
-      const response = await this.request('/trading/production.php?action=portfolio_summary');
+      const response = await this.request('/trading/production.php?action=portfolio_status');
       return response;
     } catch (error) {
       throw new APIError('Failed to fetch portfolio summary', error.statusCode, '/trading/production.php');
@@ -230,7 +230,7 @@ class WinTradesAPI {
    */
   async getPositions() {
     try {
-      const response = await this.request('/trading/production.php?action=get_positions');
+      const response = await this.request('/trading/production.php?action=open_positions');
       return response;
     } catch (error) {
       throw new APIError('Failed to fetch positions', error.statusCode, '/trading/production.php');
@@ -242,7 +242,7 @@ class WinTradesAPI {
    */
   async getPortfolioPerformance() {
     try {
-      const response = await this.request('/trading/production.php?action=portfolio_performance');
+      const response = await this.request('/trading/production.php?action=trading_performance');
       return response;
     } catch (error) {
       throw new APIError('Failed to fetch portfolio performance', error.statusCode, '/trading/production.php');

@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WinTrades API Integration Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .result { margin-top: 10px; padding: 10px; border-radius: 3px; background-color: #f8f9fa; }
+        button { padding: 8px 16px; margin: 5px; background-color: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        button:hover { background-color: #0056b3; }
+    </style>
+</head>
+<body>
+    <h1>WinTrades API Integration Test</h1>
+    <p>Testing React Frontend ↔ PHP Backend Integration</p>
+
+    <div class="test-section">
+        <h3>1. Portfolio Data Test</h3>
+        <button onclick="testPortfolio()">Test Portfolio API</button>
+        <div id="portfolioResult" class="result" style="display:none;"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>2. AI Signals Test</h3>
+        <button onclick="testSignals()">Test ML Signals API</button>
+        <div id="signalsResult" class="result" style="display:none;"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>3. Pattern Recognition Test</h3>
+        <button onclick="testPatterns()">Test Pattern Recognition API</button>
+        <div id="patternsResult" class="result" style="display:none;"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>4. Risk Assessment Test</h3>
+        <button onclick="testRisk()">Test Risk Assessment API</button>
+        <div id="riskResult" class="result" style="display:none;"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>5. React App API Test</h3>
+        <button onclick="testReactAPI()">Test React Frontend API Calls</button>
+        <div id="reactResult" class="result" style="display:none;"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost/wintradesgo/api/trading/production.php';
+        const REACT_BASE = 'http://localhost:5175';
+
+        async function makeAPICall(endpoint) {
+            try {
+                const response = await fetch(`${API_BASE}?action=${endpoint}`);
+                const data = await response.json();
+                return { success: true, data, status: response.status };
+            } catch (error) {
+                return { success: false, error: error.message };
+            }
+        }
+
+        function showResult(elementId, result, isSuccess = true) {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.className = `result ${isSuccess ? 'success' : 'error'}`;
+            element.innerHTML = `<pre>${JSON.stringify(result, null, 2)}</pre>`;
+        }
+
+        async function testPortfolio() {
+            const result = await makeAPICall('portfolio_status');
+            showResult('portfolioResult', result, result.success);
+        }
+
+        async function testSignals() {
+            const result = await makeAPICall('ml_signals');
+            showResult('signalsResult', result, result.success);
+        }
+
+        async function testPatterns() {
+            const result = await makeAPICall('pattern_recognition');
+            showResult('patternsResult', result, result.success);
+        }
+
+        async function testRisk() {
+            const result = await makeAPICall('risk_assessment');
+            showResult('riskResult', result, result.success);
+        }
+
+        async function testReactAPI() {
+            try {
+                const response = await fetch(REACT_BASE);
+                const html = await response.text();
+                
+                const result = {
+                    react_app_status: response.status === 200 ? 'RUNNING' : 'ERROR',
+                    contains_root_div: html.includes('id="root"'),
+                    contains_vite: html.includes('vite'),
+                    response_size: html.length
+                };
+                
+                showResult('reactResult', result, response.status === 200);
+            } catch (error) {
+                showResult('reactResult', { error: error.message }, false);
+            }
+        }
+
+        // Auto-run tests when page loads
+        window.addEventListener('load', () => {
+            console.log('Running integration tests...');
+            setTimeout(() => {
+                testPortfolio();
+                testSignals();
+                testPatterns();
+                testRisk();
+                testReactAPI();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
