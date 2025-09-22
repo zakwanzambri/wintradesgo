@@ -653,41 +653,18 @@ const Dashboard = () => {
   );
 
   // Handle tab switching
-  if (viewMode === 'signals') {
-    return <AISignalsTab />;
-  }
-
-  if (viewMode === 'portfolio') {
-    return <PortfolioTab />;
-  }
-
-  if (viewMode === 'patterns') {
-    return <PatternsTab />;
-  }
-
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-6">Trading Dashboard</h1>
-          <div className="flex space-x-2">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setViewMode(tab.id)}
-                className={`px-6 py-3 rounded-lg font-medium transition-colors ${
-                  viewMode === tab.id 
-                    ? 'bg-blue-600 text-white shadow-sm' 
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
+  const renderTabContent = () => {
+    if (viewMode === 'signals') {
+      return <AISignalsTab />;
+    }
+    if (viewMode === 'portfolio') {
+      return <PortfolioTab />;
+    }
+    if (viewMode === 'patterns') {
+      return <PatternsTab />;
+    }
+    // Overview content
+    return (
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div className="bg-white rounded-lg border p-6 shadow-sm">
@@ -741,6 +718,33 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
+    );
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="bg-white border-b shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 py-6">
+          <h1 className="text-3xl font-bold text-gray-900 mb-6">Trading Dashboard</h1>
+          <div className="flex space-x-2">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setViewMode(tab.id)}
+                className={`px-6 py-3 rounded-lg font-medium transition-colors ${
+                  viewMode === tab.id 
+                    ? 'bg-blue-600 text-white shadow-sm' 
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {renderTabContent()}
     </div>
   );
 };
