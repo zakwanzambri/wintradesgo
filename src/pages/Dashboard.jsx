@@ -15,9 +15,91 @@ const Dashboard = () => {
   const [marketPrices, setMarketPrices] = useState({});
   const [priceLoading, setPriceLoading] = useState(false);
   const [priceError, setPriceError] = useState(null);
+  const [wsConnected, setWsConnected] = useState(false);
+  const [wsConnections, setWsConnections] = useState({});
 
-  // Function to fetch real-time crypto prices with EXTRA SAFETY
+  // WebSocket real-time price streaming (MUCH faster than REST API)
+  const initializeWebSocket = () => {
+    console.log('🔄 Initializing Binance WebSocket connections...');
+    
+    // Close existing connections first
+    Object.values(wsConnections).forEach(ws => {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.close();
+      }
+    });
+
+    const symbols = ['btcusdt', 'ethusdt', 'adausdt'];
+    const newConnections = {};
+    let connectedCount = 0;
+
+    symbols.forEach(symbol => {
+      const wsUrl = `wss://stream.binance.com:9443/ws/${symbol}@ticker`;
+      console.log(`🔗 Connecting to ${symbol.toUpperCase()} stream...`);
+      
+      const ws = new WebSocket(wsUrl);
+      
+      ws.onopen = () => {
+        console.log(`✅ ${symbol.toUpperCase()} WebSocket connected`);
+        connectedCount++;
+        if (connectedCount === symbols.length) {
+          setWsConnected(true);
+          setPriceError(null);
+          console.log('🚀 All WebSocket connections established!');
+        }
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          const price = parseFloat(data.c); // 'c' is current price in Binance ticker
+          
+          if (price && price > 0) {
+            const cryptoSymbol = symbol.replace('usdt', '').toUpperCase();
+            
+            setMarketPrices(prev => ({
+              ...prev,
+              [cryptoSymbol]: price
+            }));
+            
+            // Log real-time updates (you can remove this later)
+            console.log(`💰 ${cryptoSymbol}: $${price.toLocaleString()}`);
+          }
+        } catch (error) {
+          console.error(`❌ Error parsing ${symbol} data:`, error);
+        }
+      };
+
+      ws.onerror = (error) => {
+        console.error(`❌ ${symbol.toUpperCase()} WebSocket error:`, error);
+        setPriceError(`WebSocket connection failed for ${symbol.toUpperCase()}`);
+      };
+
+      ws.onclose = (event) => {
+        console.log(`🔌 ${symbol.toUpperCase()} WebSocket closed`, event.code);
+        setWsConnected(false);
+        
+        // Auto-reconnect after 5 seconds
+        setTimeout(() => {
+          console.log(`🔄 Reconnecting ${symbol.toUpperCase()}...`);
+          initializeWebSocket();
+        }, 5000);
+      };
+
+      newConnections[symbol] = ws;
+    });
+
+    setWsConnections(newConnections);
+  };
+
+  // Fallback REST API function (keep as backup)
   const fetchMarketPrices = async () => {
+    // Only use REST API if WebSocket is not connected
+    if (wsConnected) {
+      console.log('⚡ WebSocket active, skipping REST API call');
+      return marketPrices;
+    }
+
     // Prevent multiple simultaneous calls
     if (priceLoading) {
       console.log('⏳ Price fetch already in progress, skipping...');
@@ -26,57 +108,76 @@ const Dashboard = () => {
 
     setPriceLoading(true);
     setPriceError(null);
-    console.log('🔄 Fetching real-time prices from CoinGecko...');
+    console.log('🔄 WebSocket not available, using REST API fallback...');
     
     try {
       // Add timeout to prevent hanging
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
       
-      const response = await fetch(
-        'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,cardano&vs_currencies=usd',
-        { 
+      // Binance API - Much higher rate limits (1200 req/min vs CoinGecko's 30/min)
+      const symbols = ['BTCUSDT', 'ETHUSDT', 'ADAUSDT'];
+      const requests = symbols.map(symbol => 
+        fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${symbol}`, {
           signal: controller.signal,
-          headers: {
-            'Accept': 'application/json',
-          }
-        }
+          headers: { 'Accept': 'application/json' }
+        })
       );
       
+      const responses = await Promise.all(requests);
       clearTimeout(timeoutId);
       
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
+      // Check if all responses are OK
+      responses.forEach((response, index) => {
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status} for ${symbols[index]}: ${response.statusText}`);
+        }
+      });
       
-      const data = await response.json();
-      console.log('✅ CoinGecko API Response:', data);
+      const dataArray = await Promise.all(responses.map(r => r.json()));
+      console.log('✅ Binance REST API Response:', dataArray);
       
-      // Validate response data
-      if (!data || typeof data !== 'object') {
-        throw new Error('Invalid response format from CoinGecko');
-      }
-      
+      // Parse Binance response format
       const prices = {
-        BTC: data.bitcoin?.usd || null,
-        ETH: data.ethereum?.usd || null,
-        ADA: data.cardano?.usd || null
+        BTC: parseFloat(dataArray[0]?.price) || null,
+        ETH: parseFloat(dataArray[1]?.price) || null,
+        ADA: parseFloat(dataArray[2]?.price) || null
       };
       
-      // Check if we got valid prices
+      // Validate prices
       if (!prices.BTC || !prices.ETH || !prices.ADA) {
-        throw new Error('Incomplete price data received');
+        throw new Error('Incomplete price data from Binance');
       }
       
-      console.log('💰 Parsed Prices:', prices);
+      console.log('💰 Parsed Binance Prices:', prices);
       setMarketPrices(prices);
       setPriceError(null);
       return prices;
       
     } catch (error) {
-      console.error('❌ Error fetching market prices:', error.message);
+      console.error('❌ Binance API Error:', error.message);
+      console.log('🔄 Falling back to CoinGecko API...');
       
-      let errorMessage = 'Failed to fetch prices';
+      // Fallback to CoinGecko if Binance fails
+      try {
+        const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,cardano&vs_currencies=usd');
+        if (response.ok) {
+          const data = await response.json();
+          const fallbackPrices = {
+            BTC: data.bitcoin?.usd || null,
+            ETH: data.ethereum?.usd || null,
+            ADA: data.cardano?.usd || null
+          };
+          console.log('✅ CoinGecko Fallback Success:', fallbackPrices);
+          setMarketPrices(fallbackPrices);
+          setPriceError(null);
+          return fallbackPrices;
+        }
+      } catch (fallbackError) {
+        console.error('❌ CoinGecko Fallback Failed:', fallbackError.message);
+      }
+      
+      let errorMessage = 'Failed to fetch prices from all sources';
       if (error.name === 'AbortError') {
         errorMessage = 'Request timeout - API too slow';
       } else if (error.message.includes('CORS')) {
@@ -87,7 +188,7 @@ const Dashboard = () => {
       
       setPriceError(errorMessage);
       
-      // Keep existing prices if we have them, don't clear them
+      // Keep existing prices if we have them
       if (Object.keys(marketPrices).length === 0) {
         console.log('🔄 No existing prices, showing error state...');
         setMarketPrices({});
@@ -119,24 +220,34 @@ const Dashboard = () => {
       } else {
         console.log('⚠️ No API signals, using demo signals');
         // Demo signals without hardcoded prices - let the component handle pricing
+        const currentTime = new Date().toLocaleString('en-CA', {
+          year: 'numeric',
+          month: '2-digit', 
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false
+        }).replace(/,/, '');
+        
         setAiSignals([
           { 
             symbol: 'BTC', 
             signal_type: 'BUY', 
             confidence: 85, 
-            generated_at: '2025-09-22 10:02:42'
+            generated_at: currentTime
           },
           { 
             symbol: 'ETH', 
             signal_type: 'BUY', 
             confidence: 83, 
-            generated_at: '2025-09-22 10:02:42'
+            generated_at: currentTime
           },
           { 
             symbol: 'ADA', 
             signal_type: 'HOLD', 
             confidence: 72, 
-            generated_at: '2025-09-22 10:02:42'
+            generated_at: currentTime
           }
         ]);
       }
@@ -144,24 +255,34 @@ const Dashboard = () => {
       console.error('❌ Error fetching AI signals:', error);
       // Even in error, don't hardcode prices - let the API handle it
       const currentPrices = await fetchMarketPrices();
+      const currentTime = new Date().toLocaleString('en-CA', {
+        year: 'numeric',
+        month: '2-digit', 
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      }).replace(/,/, '');
+      
       setAiSignals([
         { 
           symbol: 'BTC', 
           signal_type: 'BUY', 
           confidence: 85, 
-          generated_at: '2025-09-22 10:02:42'
+          generated_at: currentTime
         },
         { 
           symbol: 'ETH', 
           signal_type: 'BUY', 
           confidence: 83, 
-          generated_at: '2025-09-22 10:02:42'
+          generated_at: currentTime
         },
         { 
           symbol: 'ADA', 
           signal_type: 'HOLD', 
           confidence: 72, 
-          generated_at: '2025-09-22 10:02:42'
+          generated_at: currentTime
         }
       ]);
     }
@@ -172,24 +293,71 @@ const Dashboard = () => {
   const fetchPortfolioData = async () => {
     setPortfolioLoading(true);
     try {
+      // Get current market prices first
+      const currentPrices = await fetchMarketPrices();
+      
       const response = await fetch('http://localhost/wintradesgo/api/trading/production.php?action=portfolio_status');
       const data = await response.json();
       if (data.success && data.data) {
         if (data.data.positions_breakdown && data.data.positions_breakdown.length === 0) {
-          setPortfolioData([
-            { symbol: 'BTC', quantity: 0.5, avg_price: 42000, current_price: 43250, value: 21625, pnl: 625, pnl_percentage: 2.97 },
-            { symbol: 'ETH', quantity: 2.0, avg_price: 2500, current_price: 2680, value: 5360, pnl: 360, pnl_percentage: 7.20 },
-            { symbol: 'ADA', quantity: 1000, avg_price: 0.35, current_price: 0.42, value: 420, pnl: 70, pnl_percentage: 20.00 }
-          ]);
+          // Use real-time prices for portfolio calculations
+          const portfolioWithRealPrices = [
+            { 
+              symbol: 'BTC', 
+              quantity: 0.5, 
+              avg_price: 42000, 
+              current_price: currentPrices.BTC || 0,
+              value: (currentPrices.BTC || 0) * 0.5,
+              pnl: ((currentPrices.BTC || 0) * 0.5) - (42000 * 0.5),
+              pnl_percentage: currentPrices.BTC ? (((currentPrices.BTC - 42000) / 42000) * 100) : 0
+            },
+            { 
+              symbol: 'ETH', 
+              quantity: 2.0, 
+              avg_price: 2500, 
+              current_price: currentPrices.ETH || 0,
+              value: (currentPrices.ETH || 0) * 2.0,
+              pnl: ((currentPrices.ETH || 0) * 2.0) - (2500 * 2.0),
+              pnl_percentage: currentPrices.ETH ? (((currentPrices.ETH - 2500) / 2500) * 100) : 0
+            },
+            { 
+              symbol: 'ADA', 
+              quantity: 1000, 
+              avg_price: 0.35, 
+              current_price: currentPrices.ADA || 0,
+              value: (currentPrices.ADA || 0) * 1000,
+              pnl: ((currentPrices.ADA || 0) * 1000) - (0.35 * 1000),
+              pnl_percentage: currentPrices.ADA ? (((currentPrices.ADA - 0.35) / 0.35) * 100) : 0
+            }
+          ];
+          setPortfolioData(portfolioWithRealPrices);
         } else {
           setPortfolioData(data.data.positions_breakdown || []);
         }
       }
     } catch (error) {
       console.error('Error fetching portfolio data:', error);
+      // Even in error, try to use real prices if available
+      const currentPrices = marketPrices;
       setPortfolioData([
-        { symbol: 'BTC', quantity: 0.5, avg_price: 42000, current_price: 43250, value: 21625, pnl: 625, pnl_percentage: 2.97 },
-        { symbol: 'ETH', quantity: 2.0, avg_price: 2500, current_price: 2680, value: 5360, pnl: 360, pnl_percentage: 7.20 }
+        { 
+          symbol: 'BTC', 
+          quantity: 0.5, 
+          avg_price: 42000, 
+          current_price: currentPrices.BTC || 43250,
+          value: (currentPrices.BTC || 43250) * 0.5,
+          pnl: ((currentPrices.BTC || 43250) * 0.5) - (42000 * 0.5),
+          pnl_percentage: currentPrices.BTC ? (((currentPrices.BTC - 42000) / 42000) * 100) : 2.97
+        },
+        { 
+          symbol: 'ETH', 
+          quantity: 2.0, 
+          avg_price: 2500, 
+          current_price: currentPrices.ETH || 2680,
+          value: (currentPrices.ETH || 2680) * 2.0,
+          pnl: ((currentPrices.ETH || 2680) * 2.0) - (2500 * 2.0),
+          pnl_percentage: currentPrices.ETH ? (((currentPrices.ETH - 2500) / 2500) * 100) : 7.20
+        }
       ]);
     }
     setPortfolioLoading(false);
@@ -236,9 +404,10 @@ const Dashboard = () => {
     setPatternLoading(false);
   };
 
-  // Auto-refresh logic
+  // Auto-refresh logic - Modified for WebSocket
   useEffect(() => {
-    if (autoRefreshEnabled) {
+    if (autoRefreshEnabled && !wsConnected) {
+      // Only use REST API polling if WebSocket is not connected
       const interval = setInterval(() => {
         setSignalsCountdown(prev => {
           if (prev <= 1) {
@@ -267,14 +436,29 @@ const Dashboard = () => {
 
       return () => clearInterval(interval);
     }
-  }, [autoRefreshEnabled]);
+  }, [autoRefreshEnabled, wsConnected]);
 
-  // Initial load
+  // Initial load with WebSocket
   useEffect(() => {
-    fetchMarketPrices(); // Fetch prices first
+    console.log('🚀 Initializing dashboard...');
+    
+    // Start WebSocket for real-time prices
+    initializeWebSocket();
+    
+    // Fetch other data
     fetchAISignals();
     fetchPortfolioData();
     fetchPatternData();
+    
+    // Cleanup WebSocket on unmount
+    return () => {
+      console.log('🔌 Cleaning up WebSocket connections...');
+      Object.values(wsConnections).forEach(ws => {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.close();
+        }
+      });
+    };
   }, []);
 
   const tabs = [
@@ -313,7 +497,23 @@ const Dashboard = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
               <div className="bg-white rounded-lg border p-6 shadow-sm">
                 <p className="text-sm font-medium text-gray-700 mb-2">Portfolio Value</p>
-                <p className="text-2xl font-bold text-gray-900">$125,420</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {(() => {
+                    try {
+                      // Calculate portfolio value from real-time prices
+                      const btcValue = (marketPrices.BTC || 0) * 0.5; // 0.5 BTC
+                      const ethValue = (marketPrices.ETH || 0) * 2.0; // 2.0 ETH  
+                      const adaValue = (marketPrices.ADA || 0) * 1000; // 1000 ADA
+                      const totalValue = btcValue + ethValue + adaValue;
+                      
+                      return totalValue > 0 
+                        ? `$${totalValue.toLocaleString(undefined, {maximumFractionDigits: 0})}` 
+                        : 'Loading...';
+                    } catch (e) {
+                      return '$125,420'; // Safe fallback
+                    }
+                  })()}
+                </p>
               </div>
               
               <div className="bg-white rounded-lg border p-6 shadow-sm">
@@ -323,12 +523,41 @@ const Dashboard = () => {
               
               <div className="bg-white rounded-lg border p-6 shadow-sm">
                 <p className="text-sm font-medium text-gray-700 mb-2">Success Rate</p>
-                <p className="text-2xl font-bold text-green-600">87%</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {(() => {
+                    try {
+                      // Calculate success rate from signal confidence
+                      if (aiSignals.length === 0) return 'Loading...';
+                      
+                      const avgConfidence = aiSignals.reduce((sum, signal) => sum + (signal.confidence || 0), 0) / aiSignals.length;
+                      return `${Math.round(avgConfidence)}%`;
+                    } catch (e) {
+                      return '87%'; // Safe fallback
+                    }
+                  })()}
+                </p>
               </div>
               
               <div className="bg-white rounded-lg border p-6 shadow-sm">
                 <p className="text-sm font-medium text-gray-700 mb-2">Risk Level</p>
-                <p className="text-2xl font-bold text-orange-600">Medium</p>
+                <p className="text-2xl font-bold text-orange-600">
+                  {(() => {
+                    try {
+                      // Calculate risk level from signal strength distribution
+                      if (aiSignals.length === 0) return 'Loading...';
+                      
+                      const strongSignals = aiSignals.filter(s => (s.confidence || 0) > 85).length;
+                      const totalSignals = aiSignals.length;
+                      const strongRatio = strongSignals / totalSignals;
+                      
+                      if (strongRatio > 0.6) return 'Low';
+                      if (strongRatio > 0.3) return 'Medium';
+                      return 'High';
+                    } catch (e) {
+                      return 'Medium'; // Safe fallback
+                    }
+                  })()}
+                </p>
               </div>
             </div>
 
@@ -378,19 +607,33 @@ const Dashboard = () => {
                     />
                     Auto-refresh
                   </label>
-                  {autoRefreshEnabled && (
+                  {autoRefreshEnabled && !wsConnected && (
                     <span className="text-xs text-gray-500">Next: {signalsCountdown}s</span>
                   )}
                 </div>
+                
+                {/* WebSocket Status Indicator */}
+                <div className="flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${wsConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
+                  <span className="text-xs font-medium text-gray-600">
+                    {wsConnected ? '⚡ Live Streaming' : '🔄 REST API'}
+                  </span>
+                </div>
+                
                 <button
                   onClick={() => {
-                    fetchAISignals();
-                    setSignalsCountdown(30);
+                    if (wsConnected) {
+                      // Restart WebSocket connection
+                      initializeWebSocket();
+                    } else {
+                      fetchAISignals();
+                      setSignalsCountdown(30);
+                    }
                   }}
                   disabled={loading}
                   className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
-                  {loading ? 'Loading...' : 'Refresh Now'}
+                  {loading ? 'Loading...' : wsConnected ? 'Reconnect WebSocket' : 'Refresh Now'}
                 </button>
               </div>
             </div>
