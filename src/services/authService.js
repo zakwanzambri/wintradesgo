@@ -6,8 +6,8 @@
 class AuthService {
   constructor() {
     this.baseURL = process.env.NODE_ENV === 'production' 
-      ? '/wintradesgo/api' 
-      : 'http://localhost/wintradesgo/api';
+      ? '/wintradesgo/api/auth-simple.php' 
+      : 'http://localhost/wintradesgo/api/auth-simple.php';
     this.tokenKey = 'wintradesgo_token';
     this.refreshTokenKey = 'wintradesgo_refresh_token';
     this.userKey = 'wintradesgo_user';
@@ -18,7 +18,7 @@ class AuthService {
    */
   async register(userData) {
     try {
-      const response = await fetch(`${this.baseURL}/auth.php?action=register`, {
+      const response = await fetch(`${this.baseURL}?action=register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -29,7 +29,7 @@ class AuthService {
       const data = await response.json();
 
       if (data.success) {
-        this.setTokens(data.data.tokens);
+        this.setToken(data.data.token);
         this.setUser(data.data.user);
         return { success: true, user: data.data.user, message: data.message };
       } else {
@@ -45,7 +45,7 @@ class AuthService {
    */
   async login(credentials) {
     try {
-      const response = await fetch(`${this.baseURL}/auth.php?action=login`, {
+      const response = await fetch(`${this.baseURL}?action=login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -56,7 +56,7 @@ class AuthService {
       const data = await response.json();
 
       if (data.success) {
-        this.setTokens(data.data.tokens);
+        this.setToken(data.data.token);
         this.setUser(data.data.user);
         return { success: true, user: data.data.user, message: data.message };
       } else {
@@ -75,7 +75,7 @@ class AuthService {
       const token = this.getToken();
       
       if (token) {
-        await fetch(`${this.baseURL}/auth.php?action=logout`, {
+        await fetch(`${this.baseURL}?action=logout`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -101,7 +101,7 @@ class AuthService {
     }
 
     try {
-      const response = await fetch(`${this.baseURL}/auth.php?action=verify`, {
+      const response = await fetch(`${this.baseURL}?action=verify`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -192,6 +192,13 @@ class AuthService {
       }
       throw error;
     }
+  }
+
+  /**
+   * Set single token in localStorage
+   */
+  setToken(token) {
+    localStorage.setItem(this.tokenKey, token);
   }
 
   /**

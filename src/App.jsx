@@ -1,58 +1,66 @@
 import React from 'react'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
+import { AuthProvider } from './hooks/useAuth'
+import ProtectedRoute from './components/auth/ProtectedRoute'
 import Header from './components/layout/Header'
 import Footer from './components/layout/Footer'
 import LandingPage from './pages/LandingPage'
 import Dashboard from './pages/Dashboard'
 import Portfolio from './pages/Portfolio'
 import Pricing from './pages/Pricing'
+import SystemTest from './pages/SystemTest'
 import './index.css'
 
 function App() {
   return (
-    <Router>
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-        <Header />
-        <AnimatePresence mode="wait">
-          <Routes>
-            <Route 
-              path="/" 
-              element={
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <LandingPage />
-                </motion.div>
-              } 
+    <AuthProvider>
+      <Router>
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+          <Header />
+          <AnimatePresence mode="wait">
+            <Routes>
+              <Route 
+                path="/" 
+                element={
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <LandingPage />
+                  </motion.div>
+                } 
             />
             <Route 
               path="/dashboard" 
               element={
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <Dashboard />
-                </motion.div>
+                <ProtectedRoute>
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <Dashboard />
+                  </motion.div>
+                </ProtectedRoute>
               } 
             />
             <Route 
               path="/portfolio" 
               element={
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <Portfolio />
-                </motion.div>
+                <ProtectedRoute>
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <Portfolio />
+                  </motion.div>
+                </ProtectedRoute>
               } 
             />
             <Route 
@@ -68,11 +76,25 @@ function App() {
                 </motion.div>
               } 
             />
+            <Route 
+              path="/test" 
+              element={
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <SystemTest />
+                </motion.div>
+              } 
+            />
           </Routes>
         </AnimatePresence>
         <Footer />
       </div>
     </Router>
+    </AuthProvider>
   )
 }
 

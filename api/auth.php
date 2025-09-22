@@ -9,7 +9,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit(0);
 }
 
-require_once '../../config/database.php';
+require_once('../config/database.php');
 
 /**
  * Authentication API for WinTrades
@@ -247,13 +247,13 @@ class AuthAPI {
         $stmt->execute([$identifier, $identifier]);
         $user = $stmt->fetch();
         
-        if (!$user || !password_verify($password, $user['password_hash'])) {
+        if (!$user || !password_verify($password, $user['password'])) {
             return $this->sendResponse(false, null, 'Invalid credentials');
         }
         
-        // Update last login
-        $stmt = $this->pdo->prepare("UPDATE users SET last_login = NOW() WHERE id = ?");
-        $stmt->execute([$user['id']]);
+        // Update last login (skip for now as column doesn't exist)
+        // $stmt = $this->pdo->prepare("UPDATE users SET last_login = NOW() WHERE id = ?");
+        // $stmt->execute([$user['id']]);
         
         // Generate tokens
         $tokens = $this->generateTokens($user['id'], $rememberMe);

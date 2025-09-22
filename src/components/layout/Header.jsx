@@ -1,11 +1,21 @@
 import React, { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Menu, X, TrendingUp, BarChart3 } from 'lucide-react'
+import { Menu, X, TrendingUp, BarChart3, User, LogOut } from 'lucide-react'
+import { useAuth } from '../../hooks/useAuth'
+import AuthModal from '../auth/AuthModal'
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [showAuthModal, setShowAuthModal] = useState(false)
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
   const location = useLocation()
+  const { user, logout } = useAuth()
+
+  const handleLogout = async () => {
+    await logout()
+    setUserMenuOpen(false)
+  }
 
   const navItems = [
     { path: '/', label: 'Home' },
@@ -58,18 +68,63 @@ const Header = () => {
 
           {/* CTA Buttons */}
           <div className="hidden md:flex items-center space-x-4">
-            <Link
-              to="/dashboard"
-              className="text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 font-medium"
-            >
-              Sign In
-            </Link>
-            <Link
-              to="/pricing"
-              className="btn-primary"
-            >
-              Get Started
-            </Link>
+            {user ? (
+              <div className="relative">
+                <button
+                  onClick={() => setUserMenuOpen(!userMenuOpen)}
+                  className="flex items-center space-x-2 text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 font-medium"
+                >
+                  <User className="h-5 w-5" />
+                  <span>{user.username}</span>
+                </button>
+                {userMenuOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="absolute right-0 mt-2 w-48 bg-white dark:bg-dark-100 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 z-50"
+                  >
+                    <div className="py-1">
+                      <Link
+                        to="/dashboard"
+                        className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        Dashboard
+                      </Link>
+                      <Link
+                        to="/portfolio"
+                        className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        Portfolio
+                      </Link>
+                      <button
+                        onClick={handleLogout}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2"
+                      >
+                        <LogOut className="h-4 w-4" />
+                        <span>Sign Out</span>
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </div>
+            ) : (
+              <>
+                <button
+                  onClick={() => setShowAuthModal(true)}
+                  className="text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 font-medium"
+                >
+                  Sign In
+                </button>
+                <Link
+                  to="/pricing"
+                  className="btn-primary"
+                >
+                  Get Started
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -105,25 +160,66 @@ const Header = () => {
                 </Link>
               ))}
               <div className="flex flex-col space-y-2 pt-4 border-t border-gray-200 dark:border-gray-700">
-                <Link
-                  to="/dashboard"
-                  onClick={() => setIsMenuOpen(false)}
-                  className="text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 font-medium px-3 py-2"
-                >
-                  Sign In
-                </Link>
-                <Link
-                  to="/pricing"
-                  onClick={() => setIsMenuOpen(false)}
-                  className="btn-primary w-full text-center"
-                >
-                  Get Started
-                </Link>
+                {user ? (
+                  <>
+                    <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">
+                      Welcome, {user.username}
+                    </div>
+                    <Link
+                      to="/dashboard"
+                      onClick={() => setIsMenuOpen(false)}
+                      className="text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 font-medium px-3 py-2"
+                    >
+                      Dashboard
+                    </Link>
+                    <Link
+                      to="/portfolio"
+                      onClick={() => setIsMenuOpen(false)}
+                      className="text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 font-medium px-3 py-2"
+                    >
+                      Portfolio
+                    </Link>
+                    <button
+                      onClick={() => {
+                        handleLogout()
+                        setIsMenuOpen(false)
+                      }}
+                      className="text-left text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 font-medium px-3 py-2 flex items-center space-x-2"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      <span>Sign Out</span>
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => {
+                        setShowAuthModal(true)
+                        setIsMenuOpen(false)
+                      }}
+                      className="text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 font-medium px-3 py-2"
+                    >
+                      Sign In
+                    </button>
+                    <Link
+                      to="/pricing"
+                      onClick={() => setIsMenuOpen(false)}
+                      className="btn-primary w-full text-center"
+                    >
+                      Get Started
+                    </Link>
+                  </>
+                )}
               </div>
             </nav>
           </motion.div>
         )}
       </div>
+
+      {/* Auth Modal */}
+      {showAuthModal && (
+        <AuthModal onClose={() => setShowAuthModal(false)} />
+      )}
     </header>
   )
 }
