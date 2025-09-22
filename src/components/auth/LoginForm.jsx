@@ -102,7 +102,7 @@ const LoginForm = ({ onSuccess, onSwitchToRegister }) => {
                 name="username"
                 value={formData.username}
                 onChange={handleChange}
-                className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white placeholder-gray-400 ${
                   validationErrors.username ? 'border-red-300' : 'border-gray-300'
                 }`}
                 placeholder="Enter your username or email"
@@ -126,7 +126,7 @@ const LoginForm = ({ onSuccess, onSwitchToRegister }) => {
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
-                className={`w-full pl-10 pr-12 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                className={`w-full pl-10 pr-12 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white placeholder-gray-400 ${
                   validationErrors.password ? 'border-red-300' : 'border-gray-300'
                 }`}
                 placeholder="Enter your password"

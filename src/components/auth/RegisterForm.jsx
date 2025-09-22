@@ -153,7 +153,7 @@ const RegisterForm = ({ onSuccess, onSwitchToLogin }) => {
                 name="firstName"
                 value={formData.firstName}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white placeholder-gray-400"
                 placeholder="John"
                 disabled={loading}
               />
@@ -167,7 +167,7 @@ const RegisterForm = ({ onSuccess, onSwitchToLogin }) => {
                 name="lastName"
                 value={formData.lastName}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white placeholder-gray-400"
                 placeholder="Doe"
                 disabled={loading}
               />
@@ -186,7 +186,7 @@ const RegisterForm = ({ onSuccess, onSwitchToLogin }) => {
                 name="username"
                 value={formData.username}
                 onChange={handleChange}
-                className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white placeholder-gray-400 ${
                   validationErrors.username ? 'border-red-300' : 'border-gray-300'
                 }`}
                 placeholder="Choose a username"
@@ -210,7 +210,7 @@ const RegisterForm = ({ onSuccess, onSwitchToLogin }) => {
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
-                className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white placeholder-gray-400 ${
                   validationErrors.email ? 'border-red-300' : 'border-gray-300'
                 }`}
                 placeholder="Enter your email"
@@ -234,7 +234,7 @@ const RegisterForm = ({ onSuccess, onSwitchToLogin }) => {
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
-                className={`w-full pl-10 pr-12 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                className={`w-full pl-10 pr-12 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white placeholder-gray-400 ${
                   validationErrors.password ? 'border-red-300' : 'border-gray-300'
                 }`}
                 placeholder="Create a password"
@@ -283,7 +283,7 @@ const RegisterForm = ({ onSuccess, onSwitchToLogin }) => {
                 name="confirmPassword"
                 value={formData.confirmPassword}
                 onChange={handleChange}
-                className={`w-full pl-10 pr-12 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                className={`w-full pl-10 pr-12 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white placeholder-gray-400 ${
                   validationErrors.confirmPassword ? 'border-red-300' : 'border-gray-300'
                 }`}
                 placeholder="Confirm your password"
@@ -313,7 +313,7 @@ const RegisterForm = ({ onSuccess, onSwitchToLogin }) => {
                 name="agreeToTerms"
                 checked={formData.agreeToTerms}
                 onChange={handleChange}
-                className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded bg-white"
               />
               <span className="text-sm text-gray-600">
                 I agree to the{' '}
