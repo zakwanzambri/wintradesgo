@@ -4,11 +4,14 @@ const Dashboard = () => {
   const [viewMode, setViewMode] = useState('overview');
   const [aiSignals, setAiSignals] = useState([]);
   const [portfolioData, setPortfolioData] = useState([]);
+  const [patternData, setPatternData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [portfolioLoading, setPortfolioLoading] = useState(false);
+  const [patternLoading, setPatternLoading] = useState(false);
   const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true);
   const [signalsCountdown, setSignalsCountdown] = useState(30);
   const [portfolioCountdown, setPortfolioCountdown] = useState(60);
+  const [patternsCountdown, setPatternsCountdown] = useState(45);
 
   // Function to fetch AI signals
   const fetchAISignals = async () => {
@@ -31,7 +34,7 @@ const Dashboard = () => {
     setLoading(false);
   };
 
-  // Function to fetch Portfolio data
+    // Function to fetch Portfolio data
   const fetchPortfolioData = async () => {
     setPortfolioLoading(true);
     try {
@@ -52,21 +55,21 @@ const Dashboard = () => {
             },
             { 
               symbol: 'ETH', 
-              quantity: 10, 
-              avg_price: 2400, 
-              current_price: 2650, 
-              value: 26500, 
-              pnl: 2500, 
-              pnl_percentage: 10.42 
+              quantity: 2.0, 
+              avg_price: 2500, 
+              current_price: 2680, 
+              value: 5360, 
+              pnl: 360, 
+              pnl_percentage: 7.20 
             },
             { 
               symbol: 'ADA', 
               quantity: 1000, 
               avg_price: 0.35, 
-              current_price: 0.385, 
-              value: 385, 
-              pnl: 35, 
-              pnl_percentage: 10.0 
+              current_price: 0.42, 
+              value: 420, 
+              pnl: 70, 
+              pnl_percentage: 20.00 
             }
           ]);
         } else {
@@ -74,8 +77,8 @@ const Dashboard = () => {
         }
       }
     } catch (error) {
-      console.error('Error fetching portfolio:', error);
-      // Fallback portfolio data
+      console.error('Error fetching portfolio data:', error);
+      // Fallback data if API fails
       setPortfolioData([
         { 
           symbol: 'BTC', 
@@ -88,25 +91,99 @@ const Dashboard = () => {
         },
         { 
           symbol: 'ETH', 
-          quantity: 10, 
-          avg_price: 2400, 
-          current_price: 2650, 
-          value: 26500, 
-          pnl: 2500, 
-          pnl_percentage: 10.42 
-        },
-        { 
-          symbol: 'ADA', 
-          quantity: 1000, 
-          avg_price: 0.35, 
-          current_price: 0.385, 
-          value: 385, 
-          pnl: 35, 
-          pnl_percentage: 10.0 
+          quantity: 2.0, 
+          avg_price: 2500, 
+          current_price: 2680, 
+          value: 5360, 
+          pnl: 360, 
+          pnl_percentage: 7.20 
         }
       ]);
     }
     setPortfolioLoading(false);
+  };
+
+  // Function to fetch Pattern data
+  const fetchPatternData = async () => {
+    setPatternLoading(true);
+    try {
+      const response = await fetch('http://localhost/wintradesgo/api/trading/production.php?action=pattern_recognition');
+      const data = await response.json();
+      if (data.success && data.data && data.data.patterns) {
+        // Convert API response to flat array format
+        const patterns = [];
+        Object.keys(data.data.patterns).forEach(symbol => {
+          const symbolData = data.data.patterns[symbol];
+          symbolData.detected_patterns.forEach(pattern => {
+            patterns.push({
+              symbol: symbol,
+              pattern_type: pattern.pattern,
+              confidence: pattern.confidence,
+              prediction: pattern.signal || (pattern.breakout_target ? 'BULLISH' : 'NEUTRAL'),
+              timeframe: pattern.timeframe,
+              formation_completion: pattern.status === 'CONFIRMED' ? 100 : 
+                                   pattern.status === 'ACTIVE' ? 85 : 70,
+              target_price: pattern.breakout_target,
+              detected_at: data.data.last_scan,
+              description: `${pattern.pattern} pattern detected with ${pattern.probability} probability`,
+              status: pattern.status,
+              probability: pattern.probability
+            });
+          });
+        });
+        setPatternData(patterns);
+      }
+    } catch (error) {
+      console.error('Error fetching pattern data:', error);
+      // Fallback data if API fails
+      setPatternData([
+        {
+          symbol: 'BTC',
+          pattern_type: 'Head and Shoulders',
+          confidence: 78,
+          prediction: 'BEARISH',
+          timeframe: '4H',
+          formation_completion: 85,
+          target_price: 41200,
+          detected_at: '2025-09-22 09:45:00',
+          description: 'Classic head and shoulders pattern forming on 4H chart'
+        },
+        {
+          symbol: 'ETH',
+          pattern_type: 'Ascending Triangle',
+          confidence: 82,
+          prediction: 'BULLISH',
+          timeframe: '1H',
+          formation_completion: 70,
+          target_price: 2850,
+          detected_at: '2025-09-22 09:30:00',
+          description: 'Ascending triangle pattern with strong support at $2600'
+        },
+        {
+          symbol: 'ADA',
+          pattern_type: 'Double Bottom',
+          confidence: 75,
+          prediction: 'BULLISH',
+          timeframe: '2H',
+          formation_completion: 90,
+          target_price: 0.48,
+          detected_at: '2025-09-22 09:15:00',
+          description: 'Double bottom pattern confirmed with volume spike'
+        },
+        {
+          symbol: 'SOL',
+          pattern_type: 'Cup and Handle',
+          confidence: 88,
+          prediction: 'BULLISH',
+          timeframe: '6H',
+          formation_completion: 95,
+          target_price: 156,
+          detected_at: '2025-09-22 08:45:00',
+          description: 'Well-formed cup and handle pattern nearing completion'
+        }
+      ]);
+    }
+    setPatternLoading(false);
   };
 
   // Auto-refresh logic
@@ -128,6 +205,14 @@ const Dashboard = () => {
           }
           return prev - 1;
         });
+
+        setPatternsCountdown(prev => {
+          if (prev <= 1) {
+            fetchPatternData();
+            return 45; // Reset to 45 seconds
+          }
+          return prev - 1;
+        });
       }, 1000);
 
       return () => clearInterval(interval);
@@ -138,6 +223,7 @@ const Dashboard = () => {
   useEffect(() => {
     fetchAISignals();
     fetchPortfolioData();
+    fetchPatternData();
   }, []);
 
   const tabs = [
@@ -154,13 +240,34 @@ const Dashboard = () => {
         <div className="max-w-7xl mx-auto px-4 py-6">
           <div className="flex justify-between items-center">
             <h1 className="text-3xl font-bold text-gray-900">AI Trading Signals</h1>
-            <button
-              onClick={fetchAISignals}
-              disabled={loading}
-              className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {loading ? 'Loading...' : 'Refresh Signals'}
-            </button>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <label className="flex items-center gap-2 text-sm text-gray-600">
+                  <input
+                    type="checkbox"
+                    checked={autoRefreshEnabled}
+                    onChange={(e) => setAutoRefreshEnabled(e.target.checked)}
+                    className="rounded"
+                  />
+                  Auto-refresh
+                </label>
+                {autoRefreshEnabled && (
+                  <span className="text-xs text-gray-500">
+                    Next: {signalsCountdown}s
+                  </span>
+                )}
+              </div>
+              <button
+                onClick={() => {
+                  fetchAISignals();
+                  setSignalsCountdown(30); // Reset countdown
+                }}
+                disabled={loading}
+                className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {loading ? 'Loading...' : 'Refresh Now'}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -266,13 +373,34 @@ const Dashboard = () => {
           <div className="max-w-7xl mx-auto px-4 py-6">
             <div className="flex justify-between items-center">
               <h1 className="text-3xl font-bold text-gray-900">Portfolio Tracker</h1>
-              <button
-                onClick={fetchPortfolioData}
-                disabled={portfolioLoading}
-                className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {portfolioLoading ? 'Loading...' : 'Refresh Portfolio'}
-              </button>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <label className="flex items-center gap-2 text-sm text-gray-600">
+                    <input
+                      type="checkbox"
+                      checked={autoRefreshEnabled}
+                      onChange={(e) => setAutoRefreshEnabled(e.target.checked)}
+                      className="rounded"
+                    />
+                    Auto-refresh
+                  </label>
+                  {autoRefreshEnabled && (
+                    <span className="text-xs text-gray-500">
+                      Next: {portfolioCountdown}s
+                    </span>
+                  )}
+                </div>
+                <button
+                  onClick={() => {
+                    fetchPortfolioData();
+                    setPortfolioCountdown(60); // Reset countdown
+                  }}
+                  disabled={portfolioLoading}
+                  className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {portfolioLoading ? 'Loading...' : 'Refresh Now'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -369,6 +497,161 @@ const Dashboard = () => {
     );
   };
 
+  // Pattern Recognition Component
+  const PatternsTab = () => (
+    <div className="min-h-screen bg-gray-50">
+      <div className="bg-white border-b shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 py-6">
+          <div className="flex justify-between items-center">
+            <h1 className="text-3xl font-bold text-gray-900">Pattern Recognition</h1>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <label className="flex items-center gap-2 text-sm text-gray-600">
+                  <input
+                    type="checkbox"
+                    checked={autoRefreshEnabled}
+                    onChange={(e) => setAutoRefreshEnabled(e.target.checked)}
+                    className="rounded"
+                  />
+                  Auto-refresh
+                </label>
+                {autoRefreshEnabled && (
+                  <span className="text-xs text-gray-500">
+                    Next: {patternsCountdown}s
+                  </span>
+                )}
+              </div>
+              <button
+                onClick={() => {
+                  fetchPatternData();
+                  setPatternsCountdown(45); // Reset countdown
+                }}
+                disabled={patternLoading}
+                className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {patternLoading ? 'Loading...' : 'Refresh Now'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        {/* Pattern Summary */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <div className="bg-white rounded-lg border p-6 shadow-sm">
+            <p className="text-sm font-medium text-gray-700 mb-2">Total Patterns</p>
+            <p className="text-3xl font-bold text-gray-900">{patternData.length}</p>
+          </div>
+          <div className="bg-white rounded-lg border p-6 shadow-sm">
+            <p className="text-sm font-medium text-gray-700 mb-2">Bullish Patterns</p>
+            <p className="text-3xl font-bold text-green-600">
+              {patternData.filter(p => p.prediction === 'BULLISH').length}
+            </p>
+          </div>
+          <div className="bg-white rounded-lg border p-6 shadow-sm">
+            <p className="text-sm font-medium text-gray-700 mb-2">Bearish Patterns</p>
+            <p className="text-3xl font-bold text-red-600">
+              {patternData.filter(p => p.prediction === 'BEARISH').length}
+            </p>
+          </div>
+          <div className="bg-white rounded-lg border p-6 shadow-sm">
+            <p className="text-sm font-medium text-gray-700 mb-2">Avg Confidence</p>
+            <p className="text-3xl font-bold text-blue-600">
+              {patternData.length > 0 ? 
+                Math.round(patternData.reduce((sum, p) => sum + p.confidence, 0) / patternData.length) 
+                : 0}%
+            </p>
+          </div>
+        </div>
+
+        {/* Pattern Recognition Results */}
+        <div className="bg-white rounded-lg border shadow-sm">
+          <div className="px-6 py-4 border-b">
+            <h2 className="text-xl font-bold text-gray-900">Detected Patterns</h2>
+          </div>
+          
+          {patternLoading ? (
+            <div className="text-center py-8">
+              <p className="text-gray-600">Analyzing patterns...</p>
+            </div>
+          ) : patternData.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
+              {patternData.map((pattern, index) => (
+                <div key={index} className="border rounded-lg p-6 hover:shadow-md transition-shadow">
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900">{pattern.symbol}</h3>
+                      <p className="text-sm text-gray-600">{pattern.timeframe} Chart</p>
+                    </div>
+                    <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+                      pattern.prediction === 'BULLISH' ? 'bg-green-100 text-green-800' :
+                      pattern.prediction === 'BEARISH' ? 'bg-red-100 text-red-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {pattern.prediction}
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">Pattern Type</p>
+                      <p className="text-lg font-semibold text-blue-600">{pattern.pattern_type}</p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Confidence</p>
+                        <p className="text-sm font-semibold text-gray-900">{pattern.confidence}%</p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Completion</p>
+                        <p className="text-sm font-semibold text-gray-900">{pattern.formation_completion}%</p>
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Target Price</p>
+                      <p className="text-sm font-semibold text-gray-900">${pattern.target_price?.toLocaleString()}</p>
+                    </div>
+
+                    <div>
+                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Description</p>
+                      <p className="text-sm text-gray-700">{pattern.description}</p>
+                    </div>
+
+                    <div>
+                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Detected At</p>
+                      <p className="text-sm text-gray-600">{pattern.detected_at}</p>
+                    </div>
+
+                    {/* Progress bar for formation completion */}
+                    <div>
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-xs font-medium text-gray-500">Formation Progress</span>
+                        <span className="text-xs text-gray-500">{pattern.formation_completion}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div 
+                          className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                          style={{ width: `${pattern.formation_completion}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-gray-600">No patterns detected. Click refresh to analyze current market data.</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
   // Handle tab switching
   if (viewMode === 'signals') {
     return <AISignalsTab />;
@@ -376,6 +659,10 @@ const Dashboard = () => {
 
   if (viewMode === 'portfolio') {
     return <PortfolioTab />;
+  }
+
+  if (viewMode === 'patterns') {
+    return <PatternsTab />;
   }
 
   return (
@@ -425,7 +712,29 @@ const Dashboard = () => {
         </div>
 
         <div className="bg-white rounded-lg border p-6 shadow-sm">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">Recent AI Signals</h2>
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-bold text-gray-900">Recent AI Signals</h2>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <label className="flex items-center gap-2 text-sm text-gray-600">
+                  <input
+                    type="checkbox"
+                    checked={autoRefreshEnabled}
+                    onChange={(e) => setAutoRefreshEnabled(e.target.checked)}
+                    className="rounded"
+                  />
+                  Auto-refresh
+                </label>
+                {autoRefreshEnabled && (
+                  <div className="text-xs text-gray-500">
+                    <div>Signals: {signalsCountdown}s</div>
+                    <div>Portfolio: {portfolioCountdown}s</div>
+                    <div>Patterns: {patternsCountdown}s</div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
           <div className="text-center py-8">
             <p className="text-gray-600">Loading signals...</p>
             <p className="text-sm text-gray-500 mt-2">Click on "AI Signals" tab to view detailed signals</p>
