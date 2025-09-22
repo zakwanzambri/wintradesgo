@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff, LogIn, Mail, Lock, AlertCircle } from 'lucide-react';
-import { useLogin } from '../hooks/useAuth';
+import { useLogin } from '../../hooks/useAuth';
 
 const LoginForm = ({ onSuccess, onSwitchToRegister }) => {
   const [formData, setFormData] = useState({

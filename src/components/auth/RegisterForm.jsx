@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff, UserPlus, Mail, Lock, User, AlertCircle, CheckCircle } from 'lucide-react';
-import { useRegister } from '../hooks/useAuth';
+import { useRegister } from '../../hooks/useAuth';
 
 const RegisterForm = ({ onSuccess, onSwitchToLogin }) => {
   const [formData, setFormData] = useState({
