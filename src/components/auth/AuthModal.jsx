@@ -8,12 +8,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import LoginForm from './LoginForm';
 import RegisterForm from './RegisterForm';
+import { useAuth } from '../../hooks/useAuth';
 
 const AuthModal = ({ isOpen, onClose, defaultTab = 'login' }) => {
   const [activeTab, setActiveTab] = useState(defaultTab);
+  const { login: contextLogin } = useAuth();
 
-  const handleSuccess = (user) => {
+  const handleSuccess = async (user) => {
     console.log('Authentication successful:', user);
+    // Simply close the modal - AuthProvider should handle the state update
     onClose();
   };
 

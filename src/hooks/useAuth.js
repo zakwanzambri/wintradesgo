@@ -8,6 +8,7 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
+  // Check localStorage for existing auth on mount and when storage changes
   useEffect(() => {
     const initAuth = async () => {
       try {
@@ -16,19 +17,66 @@ export function AuthProvider({ children }) {
           setUser(result.user);
           setIsAuthenticated(true);
         } else {
-          setUser(null);
-          setIsAuthenticated(false);
+          // Fallback to localStorage if verify fails
+          const storedUser = authService.getUser();
+          const storedToken = authService.getToken();
+          if (storedUser && storedToken) {
+            setUser(storedUser);
+            setIsAuthenticated(true);
+          } else {
+            setUser(null);
+            setIsAuthenticated(false);
+          }
         }
       } catch (error) {
         console.error('Auth initialization error:', error);
-        setUser(null);
-        setIsAuthenticated(false);
+        // Fallback to localStorage
+        const storedUser = authService.getUser();
+        const storedToken = authService.getToken();
+        if (storedUser && storedToken) {
+          setUser(storedUser);
+          setIsAuthenticated(true);
+        } else {
+          setUser(null);
+          setIsAuthenticated(false);
+        }
       } finally {
         setLoading(false);
       }
     };
 
+    // Listen for localStorage changes (for when login happens)
+    const handleStorageChange = () => {
+      const storedUser = authService.getUser();
+      const storedToken = authService.getToken();
+      if (storedUser && storedToken) {
+        setUser(storedUser);
+        setIsAuthenticated(true);
+      } else {
+        setUser(null);
+        setIsAuthenticated(false);
+      }
+    };
+
+    // Listen for custom auth state changes
+    const handleAuthStateChange = () => {
+      const storedUser = authService.getUser();
+      const storedToken = authService.getToken();
+      if (storedUser && storedToken) {
+        setUser(storedUser);
+        setIsAuthenticated(true);
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('authStateChanged', handleAuthStateChange);
+    
     initAuth();
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('authStateChanged', handleAuthStateChange);
+    };
   }, []);
 
   const login = useCallback(async (credentials) => {
@@ -38,6 +86,8 @@ export function AuthProvider({ children }) {
       if (result.success) {
         setUser(result.user);
         setIsAuthenticated(true);
+        // Trigger a custom event to notify other components
+        window.dispatchEvent(new Event('authStateChanged'));
         return { success: true, user: result.user };
       } else {
         return { success: false, error: result.error };

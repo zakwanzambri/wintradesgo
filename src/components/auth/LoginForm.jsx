@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff, LogIn, Mail, Lock, AlertCircle } from 'lucide-react';
-import { useLogin } from '../../hooks/useAuth';
+import { useAuth } from '../../hooks/useAuth';
 
 const LoginForm = ({ onSuccess, onSwitchToRegister }) => {
   const [formData, setFormData] = useState({
@@ -17,7 +17,8 @@ const LoginForm = ({ onSuccess, onSwitchToRegister }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [validationErrors, setValidationErrors] = useState({});
 
-  const { login, loading, error } = useLogin();
+  const { login, loading, user } = useAuth();
+  const [error, setError] = useState(null);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -57,12 +58,16 @@ const LoginForm = ({ onSuccess, onSwitchToRegister }) => {
       return;
     }
 
+    setError(null);
+    
     const result = await login(formData);
     
     if (result.success) {
       if (onSuccess) {
         onSuccess(result.user);
       }
+    } else {
+      setError(result.error || 'Login failed');
     }
   };
 
