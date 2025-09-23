@@ -12,6 +12,7 @@ import Pricing from './pages/Pricing'
 import SystemTest from './pages/SystemTest'
 import AITest from './pages/AITest'
 import EnhancedDashboard from './pages/EnhancedDashboard'
+import Phase3Progress from './pages/Phase3Progress'
 import './index.css'
 
 function App() {
@@ -117,6 +118,19 @@ function App() {
                     <EnhancedDashboard />
                   </motion.div>
                 </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/phase3-progress" 
+              element={
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <Phase3Progress />
+                </motion.div>
               } 
             />
           </Routes>
