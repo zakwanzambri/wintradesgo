@@ -13,6 +13,7 @@ import SystemTest from './pages/SystemTest'
 import AITest from './pages/AITest'
 import EnhancedDashboard from './pages/EnhancedDashboard'
 import Phase3Progress from './pages/Phase3Progress'
+import Phase3Integration from './pages/Phase3Integration'
 import './index.css'
 
 function App() {
@@ -130,6 +131,19 @@ function App() {
                   transition={{ duration: 0.3 }}
                 >
                   <Phase3Progress />
+                </motion.div>
+              } 
+            />
+            <Route 
+              path="/phase3-integration" 
+              element={
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <Phase3Integration />
                 </motion.div>
               } 
             />

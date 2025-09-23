@@ -23,6 +23,7 @@ const Header = () => {
     { path: '/enhanced-dashboard', label: 'Enhanced AI' },
     { path: '/portfolio', label: 'Portfolio' },
     { path: '/phase3-progress', label: '🚀 Phase 3 Progress' },
+    { path: '/phase3-integration', label: '🔌 Integration Test' },
     { path: '/pricing', label: 'Pricing' },
   ]
 
