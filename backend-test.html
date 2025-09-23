@@ -15,7 +15,43 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            padding: 20px;
+         function connectWebSocket() {
+            if (wsConnection) {
+                log('📡 Real-time polling already active', 'warning');
+                return;
+            }
+
+            log('📡 Starting real-time data polling...', 'info');
+            document.getElementById('wsStatus').className = 'websocket-status ws-connecting';
+            document.getElementById('wsStatus').textContent = 'Real-time: Starting...';
+
+            // Test polling API first
+            fetch('http://localhost:8081/polling-api.php?action=test')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        log('✅ Real-time polling API connected', 'success');
+                        document.getElementById('wsStatus').className = 'websocket-status ws-connected';
+                        document.getElementById('wsStatus').textContent = 'Real-time: Polling Active';
+                        
+                        // Start polling every 5 seconds
+                        wsConnection = setInterval(pollLiveUpdates, 5000);
+                        
+                        // Get initial data
+                        pollLiveUpdates();
+                        
+                    } else {
+                        log('❌ Polling API not available', 'error');
+                        document.getElementById('wsStatus').className = 'websocket-status ws-disconnected';
+                        document.getElementById('wsStatus').textContent = 'Real-time: Failed';
+                    }
+                })
+                .catch(error => {
+                    log('❌ Real-time polling failed: ' + error.message, 'error');
+                    document.getElementById('wsStatus').className = 'websocket-status ws-disconnected';
+                    document.getElementById('wsStatus').textContent = 'Real-time: Failed';
+                });
+        }ding: 20px;
         }
 
         .container {
@@ -309,7 +345,7 @@
             <button onclick="testAISignals()" id="aiTestBtn">🤖 Test AI Signals</button>
             <button onclick="testMarketData()" id="marketTestBtn">📈 Test Market Data</button>
             <button onclick="testTechnicalAnalysis()" id="techTestBtn">📊 Test Technical Analysis</button>
-            <button onclick="connectWebSocket()" id="wsTestBtn">🔌 Connect WebSocket</button>
+            <button onclick="connectWebSocket()" id="wsTestBtn">� Connect Real-time Stream</button>
             <button onclick="clearLog()" class="clear-log">🗑️ Clear Log</button>
         </div>
 
@@ -378,12 +414,12 @@
         async function checkBackendStatus() {
             try {
                 const response = await winTradesClient.getSystemStatus();
-                if (response.status === 'operational') {
+                if (response && response.status === 'success') {
                     document.getElementById('systemStatus').innerHTML = `
                         ✅ Backend is operational<br>
-                        📍 Version: ${response.version}<br>
-                        ⏱️ Uptime: ${response.uptime}<br>
-                        🔧 Components: ${Object.keys(response.components).length} active
+                        📍 AI Engine: ${response.ai_engine || 'Active'}<br>
+                        ⏱️ Timestamp: ${response.timestamp}<br>
+                        🔧 Components: AI, Market Data, Technical Analysis
                     `;
                     log('✅ Backend connectivity confirmed', 'success');
                 } else {
@@ -445,10 +481,20 @@
         async function testAISignals() {
             log('🤖 Testing AI Signals...', 'info');
             try {
-                const signals = await winTradesClient.getMultipleSignals(['BTC', 'ETH', 'ADA']);
-                signals.forEach(signal => {
-                    if (signal.status === 'success') {
-                        log(`💡 ${signal.symbol || 'Unknown'}: ${signal.ai_signal?.signal_type || 'N/A'} (${signal.ai_signal?.confidence || 0}% confidence)`, 'success');
+                const signals = await Promise.all([
+                    winTradesClient.getAISignal('BTC'),
+                    winTradesClient.getAISignal('ETH'),
+                    winTradesClient.getAISignal('ADA')
+                ]);
+                
+                signals.forEach((signal, index) => {
+                    const symbols = ['BTC', 'ETH', 'ADA'];
+                    if (signal && signal.status === 'success') {
+                        const confidence = signal.ai_signal?.confidence || signal.lstm_prediction?.confidence * 100 || 0;
+                        const signalType = signal.ai_signal?.signal_type || 'UNKNOWN';
+                        log(`💡 ${symbols[index]}: ${signalType} (${confidence}% confidence)`, 'success');
+                    } else if (signal && signal.status === 'error') {
+                        log(`⚠️ ${symbols[index]}: ${signal.message}`, 'warning');
                     }
                 });
                 displayAISignalsData(signals);
@@ -461,14 +507,28 @@
             log('📈 Testing Market Data...', 'info');
             try {
                 const data = await winTradesClient.getMarketData();
-                if (data.status === 'success' && data.data) {
-                    log(`📊 Retrieved ${data.data.length} market data points`, 'success');
-                    data.data.forEach(item => {
-                        const change = item.change_24h || 0;
-                        const changeStr = change > 0 ? `+${change.toFixed(2)}%` : `${change.toFixed(2)}%`;
-                        log(`   ${item.symbol}: $${item.price} (${changeStr})`, 'info');
-                    });
-                    displayMarketData(data.data);
+                if (data && data.status === 'success') {
+                    if (data.market_data) {
+                        log(`📊 Retrieved market data for ${data.market_data.symbol}`, 'success');
+                        const change = data.market_data['24h_change'] || data.market_data.change_24h || 0;
+                        const changeStr = change > 0 ? `+${change}` : `${change}`;
+                        log(`   ${data.market_data.symbol}: $${data.market_data.current_price} (${changeStr})`, 'info');
+                        displayMarketData([data.market_data]);
+                    } else if (data.data && data.data.length > 0) {
+                        log(`📊 Retrieved ${data.data.length} market data points`, 'success');
+                        data.data.forEach(item => {
+                            const change = item.change_24h || 0;
+                            const changeStr = change > 0 ? `+${change.toFixed(2)}%` : `${change.toFixed(2)}%`;
+                            log(`   ${item.symbol}: $${item.price} (${changeStr})`, 'info');
+                        });
+                        displayMarketData(data.data);
+                    } else {
+                        log('📊 Market data response received but no data available', 'warning');
+                    }
+                } else if (data && data.status === 'error') {
+                    log('⚠️ Market data API returned error: ' + data.message, 'warning');
+                } else {
+                    log('⚠️ Unexpected market data response format', 'warning');
                 }
             } catch (error) {
                 log('❌ Market Data test failed: ' + error.message, 'error');
@@ -479,59 +539,106 @@
             log('📊 Testing Technical Analysis...', 'info');
             try {
                 const data = await winTradesClient.getTechnicalAnalysis();
-                log(`📈 RSI: ${data.rsi}`, 'success');
-                log(`📉 MACD: ${JSON.stringify(data.macd)}`, 'info');
-                log(`📊 Bollinger Bands: ${JSON.stringify(data.bollinger_bands)}`, 'info');
-                displayTechnicalData(data);
+                if (data && data.status === 'success') {
+                    if (data.technical_analysis) {
+                        const ta = data.technical_analysis;
+                        log(`📈 RSI: ${ta.rsi}`, 'success');
+                        log(`📉 MACD: ${JSON.stringify(ta.macd)}`, 'info');
+                        if (ta.moving_average_50) log(`📊 MA50: ${ta.moving_average_50}`, 'info');
+                        displayTechnicalData(data);
+                    } else if (data.rsi !== undefined) {
+                        log(`📈 RSI: ${data.rsi}`, 'success');
+                        log(`📉 MACD: ${JSON.stringify(data.macd)}`, 'info');
+                        log(`📊 Bollinger Bands: ${JSON.stringify(data.bollinger_bands)}`, 'info');
+                        displayTechnicalData(data);
+                    } else {
+                        log('📊 Technical analysis response received but no indicators available', 'warning');
+                    }
+                } else if (data && data.status === 'error') {
+                    log('⚠️ Technical analysis API returned error: ' + data.message, 'warning');
+                } else {
+                    log('⚠️ Unexpected technical analysis response format', 'warning');
+                }
             } catch (error) {
                 log('❌ Technical Analysis test failed: ' + error.message, 'error');
             }
         }
 
         function connectWebSocket() {
-            if (wsConnection && wsConnection.readyState === WebSocket.OPEN) {
-                log('🔌 WebSocket already connected', 'warning');
+            if (wsConnection && wsConnection.readyState !== EventSource.CLOSED) {
+                log('� Real-time connection already active', 'warning');
                 return;
             }
 
-            log('🔌 Connecting to WebSocket...', 'info');
+            log('� Connecting to real-time data stream (SSE)...', 'info');
             document.getElementById('wsStatus').className = 'websocket-status ws-connecting';
-            document.getElementById('wsStatus').textContent = 'WebSocket: Connecting...';
+            document.getElementById('wsStatus').textContent = 'Real-time: Connecting...';
 
             try {
-                wsConnection = winTradesClient.connectWebSocket({
-                    onOpen: () => {
-                        log('✅ WebSocket connected successfully', 'success');
-                        document.getElementById('wsStatus').className = 'websocket-status ws-connected';
-                        document.getElementById('wsStatus').textContent = 'WebSocket: Connected';
-                        
-                        // Subscribe to market data
-                        winTradesClient.subscribeToMarketData(wsConnection, ['BTC', 'ETH']);
-                        winTradesClient.subscribeToAISignals(wsConnection, ['BTC']);
-                    },
-                    onMarketUpdate: (data) => {
-                        log(`📡 Market Update: ${JSON.stringify(data)}`, 'info');
-                        displayRealTimeData('Market Data', data);
-                    },
-                    onSignalUpdate: (data) => {
-                        log(`🤖 AI Signal Update: ${JSON.stringify(data)}`, 'success');
-                        displayRealTimeData('AI Signal', data);
-                    },
-                    onError: (error) => {
-                        log('❌ WebSocket error: ' + error, 'error');
-                        document.getElementById('wsStatus').className = 'websocket-status ws-disconnected';
-                        document.getElementById('wsStatus').textContent = 'WebSocket: Error';
-                    },
-                    onClose: () => {
-                        log('🔌 WebSocket disconnected', 'warning');
-                        document.getElementById('wsStatus').className = 'websocket-status ws-disconnected';
-                        document.getElementById('wsStatus').textContent = 'WebSocket: Disconnected';
-                    }
+                // Use SSE instead of WebSocket
+                const sseUrl = 'http://localhost:8082/sse-server.php?action=stream';
+                wsConnection = new EventSource(sseUrl);
+                
+                wsConnection.onopen = () => {
+                    log('✅ Real-time stream connected successfully', 'success');
+                    document.getElementById('wsStatus').className = 'websocket-status ws-connected';
+                    document.getElementById('wsStatus').textContent = 'Real-time: Connected (SSE)';
+                };
+
+                // Handle different SSE events
+                wsConnection.addEventListener('connection', (event) => {
+                    const data = JSON.parse(event.data);
+                    log(`🔌 ${data.message}`, 'success');
                 });
+
+                wsConnection.addEventListener('market_update', (event) => {
+                    const data = JSON.parse(event.data);
+                    log(`📈 Market Update: ${data.data?.length || 0} symbols updated`, 'info');
+                    displayRealTimeData('Market Update', data.data);
+                });
+
+                wsConnection.addEventListener('ai_signal_update', (event) => {
+                    const data = JSON.parse(event.data);
+                    log(`🤖 AI Signal: ${data.symbol} - ${data.signal_type} (${data.confidence}%)`, 'success');
+                    displayRealTimeData('AI Signal', data);
+                });
+
+                wsConnection.addEventListener('heartbeat', (event) => {
+                    const data = JSON.parse(event.data);
+                    log(`� Heartbeat: ${data.timestamp}`, 'info');
+                });
+
+                wsConnection.addEventListener('error_event', (event) => {
+                    const data = JSON.parse(event.data);
+                    log(`❌ Stream Error: ${data.message}`, 'error');
+                });
+
+                wsConnection.onerror = (error) => {
+                    log('❌ Real-time connection error', 'error');
+                    document.getElementById('wsStatus').className = 'websocket-status ws-disconnected';
+                    document.getElementById('wsStatus').textContent = 'Real-time: Error';
+                };
+
+                wsConnection.addEventListener('timeout', (event) => {
+                    log('⏰ Real-time session timeout - reconnection needed', 'warning');
+                    document.getElementById('wsStatus').className = 'websocket-status ws-disconnected';
+                    document.getElementById('wsStatus').textContent = 'Real-time: Timeout';
+                });
+
+                // Set timeout to handle connection failures
+                setTimeout(() => {
+                    if (wsConnection.readyState === EventSource.CONNECTING) {
+                        log('⚠️ Real-time connection timeout - service may not be available', 'warning');
+                        wsConnection.close();
+                        document.getElementById('wsStatus').className = 'websocket-status ws-disconnected';
+                        document.getElementById('wsStatus').textContent = 'Real-time: Not Available';
+                    }
+                }, 10000);
+                
             } catch (error) {
-                log('❌ WebSocket connection failed: ' + error.message, 'error');
+                log('❌ Real-time connection failed: ' + error.message, 'error');
                 document.getElementById('wsStatus').className = 'websocket-status ws-disconnected';
-                document.getElementById('wsStatus').textContent = 'WebSocket: Failed';
+                document.getElementById('wsStatus').textContent = 'Real-time: Failed';
             }
         }
 
@@ -589,6 +696,38 @@
             const updates = content.querySelectorAll('div');
             if (updates.length > 5) {
                 content.removeChild(updates[0]);
+            }
+        }
+
+        async function pollLiveUpdates() {
+            try {
+                const response = await fetch('http://localhost:8081/polling-api.php?action=updates');
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    // Handle market data
+                    if (data.data.market && data.data.market.length > 0) {
+                        log(`📈 Market Update: ${data.data.market.length} symbols updated`, 'info');
+                        displayRealTimeData('Market Update', data.data.market);
+                    }
+                    
+                    // Handle AI signals
+                    if (data.data.ai_signals && data.data.ai_signals.length > 0) {
+                        data.data.ai_signals.forEach(signal => {
+                            log(`🤖 AI Signal: ${signal.symbol} - ${signal.signal_type} (${signal.confidence}%)`, 'success');
+                        });
+                        displayRealTimeData('AI Signals', data.data.ai_signals);
+                    }
+                    
+                    // Heartbeat
+                    log(`💓 Live data updated: ${data.timestamp}`, 'info');
+                    
+                } else {
+                    log('⚠️ Polling update failed: ' + (data.message || 'Unknown error'), 'warning');
+                }
+                
+            } catch (error) {
+                log('❌ Polling error: ' + error.message, 'error');
             }
         }
 
