@@ -151,6 +151,11 @@ class ProfessionalBacktestEngine {
      * Get strategy signal
      */
     private function getStrategySignal($strategy, $marketData, $currentIndex, $parameters) {
+        // Check if it's a custom function
+        if (function_exists($strategy)) {
+            return call_user_func($strategy, $marketData, $currentIndex);
+        }
+        
         switch ($strategy) {
             case 'lstm_strategy':
                 return $this->getLSTMSignal($marketData, $currentIndex, $parameters);
