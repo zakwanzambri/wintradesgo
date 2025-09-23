@@ -65,9 +65,9 @@ class RealLSTMModel:
             'bollinger_lower', 'sma_20', 'ema_12', 'ema_26'
         ]
         
-        print(f"🧠 Initialized Real LSTM Model for {symbol}")
-        print(f"📊 Sequence Length: {sequence_length}")
-        print(f"🔧 Features: {len(self.features)}")
+        print(f"[AI] Initialized Real LSTM Model for {symbol}")
+        print(f"[DATA] Sequence Length: {sequence_length}")
+        print(f"[CONFIG] Features: {len(self.features)}")
     
     def calculate_technical_indicators(self, df):
         """
