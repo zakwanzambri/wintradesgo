@@ -417,7 +417,7 @@ const Dashboard = () => {
     setPortfolioLoading(false);
   };
 
-  // Fetch Phase 2 Systems Data
+  // Function to fetch REAL Pattern data
   const fetchPhase2Data = async () => {
     try {
       // Fetch backtest results
@@ -432,39 +432,6 @@ const Dashboard = () => {
       // Fetch active alerts
       const activeAlerts = alertSystem.getActiveAlerts();
       setAlerts(activeAlerts.slice(0, 5));
-
-      // Fetch strategies
-      const allStrategies = strategyBuilder.getAllStrategies();
-      setStrategies(allStrategies);
-
-      // Fetch performance metrics
-      const metrics = performanceTracker.calculatePerformanceMetrics();
-      setPerformanceMetrics(metrics);
-
-      console.log('✅ Phase 2 data fetched successfully');
-    } catch (error) {
-      console.error('❌ Error fetching Phase 2 data:', error);
-    }
-  };
-
-  // Fetch historical data for pattern analysis
-  const fetchHistoricalData = async (symbol) => {
-    try {
-      const response = await fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=1h&limit=100`);
-      const data = await response.json();
-      
-      return {
-        highs: data.map(item => parseFloat(item[2])),
-        lows: data.map(item => parseFloat(item[3])),
-        opens: data.map(item => parseFloat(item[1])),
-        closes: data.map(item => parseFloat(item[4])),
-        volumes: data.map(item => parseFloat(item[5]))
-      };
-    } catch (error) {
-      console.error('Error fetching historical data:', error);
-      return null;
-    }
-  };
 
       // Fetch strategies
       const allStrategies = strategyBuilder.getAllStrategies();
@@ -1424,6 +1391,430 @@ const Dashboard = () => {
               ) : (
                 <div className="text-center py-8">
                   <p className="text-gray-600">No patterns detected. Click refresh to analyze current market data.</p>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
+        {/* Phase 2 Systems */}
+        
+        {/* Backtesting Section */}
+        {viewMode === 'backtest' && (
+          <>
+            <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-gray-900">📈 Backtesting Engine</h2>
+                <div className="flex gap-3">
+                  <button 
+                    onClick={() => window.open('https://github.com/zakwanzambri/backtesting-guide', '_blank')}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    📚 Learn Backtesting
+                  </button>
+                  <button 
+                    onClick={fetchPhase2Data}
+                    className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+                  >
+                    🔄 Refresh Results
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {backtestResults.length > 0 ? backtestResults.map((result, index) => (
+                  <div key={index} className="border border-gray-200 rounded-lg p-4">
+                    <div className="flex justify-between items-start mb-3">
+                      <h3 className="font-semibold text-gray-900">{result.strategy || `Strategy ${index + 1}`}</h3>
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${
+                        result.winRate > 60 ? 'bg-green-100 text-green-800' : 
+                        result.winRate > 40 ? 'bg-yellow-100 text-yellow-800' : 
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        {result.winRate?.toFixed(1)}% Win Rate
+                      </span>
+                    </div>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Total Trades:</span>
+                        <span className="font-medium">{result.totalTrades || 0}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Profit Factor:</span>
+                        <span className="font-medium">{result.profitFactor?.toFixed(2) || '0.00'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Total Return:</span>
+                        <span className={`font-medium ${
+                          result.totalReturn > 0 ? 'text-green-600' : 'text-red-600'
+                        }`}>
+                          {result.totalReturn?.toFixed(1) || '0.0'}%
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Max Drawdown:</span>
+                        <span className="font-medium text-red-600">
+                          -{result.maxDrawdown?.toFixed(1) || '0.0'}%
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )) : (
+                  <div className="col-span-full text-center py-8">
+                    <p className="text-gray-600">No backtest results available. Create a strategy and run your first backtest!</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Paper Trading Section */}
+        {viewMode === 'paper' && (
+          <>
+            <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-gray-900">📝 Paper Trading System</h2>
+                <div className="flex gap-3">
+                  <button 
+                    onClick={() => paperTrading.placeOrder('BTCUSDT', 'BUY', 0.001, 0)}
+                    className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+                  >
+                    🟢 Buy BTC
+                  </button>
+                  <button 
+                    onClick={() => paperTrading.placeOrder('BTCUSDT', 'SELL', 0.001, 0)}
+                    className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+                  >
+                    🔴 Sell BTC
+                  </button>
+                  <button 
+                    onClick={fetchPhase2Data}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    🔄 Refresh Trades
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Recent Trades</h3>
+                  {paperTrades.length > 0 ? paperTrades.map((trade, index) => (
+                    <div key={index} className="border border-gray-200 rounded-lg p-4">
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <span className="font-semibold">{trade.symbol}</span>
+                          <span className={`ml-2 px-2 py-1 rounded text-xs font-medium ${
+                            trade.side === 'BUY' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                          }`}>
+                            {trade.side}
+                          </span>
+                        </div>
+                        <span className="text-sm text-gray-600">{trade.timestamp}</span>
+                      </div>
+                      <div className="text-sm space-y-1">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Quantity:</span>
+                          <span>{trade.quantity}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Price:</span>
+                          <span>${trade.price?.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">P&L:</span>
+                          <span className={trade.pnl > 0 ? 'text-green-600' : 'text-red-600'}>
+                            ${trade.pnl?.toFixed(2) || '0.00'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )) : (
+                    <div className="text-center py-8">
+                      <p className="text-gray-600">No paper trades yet. Start trading to see your history!</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Portfolio Summary</h3>
+                  <div className="border border-gray-200 rounded-lg p-4">
+                    <div className="text-sm space-y-3">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Total Value:</span>
+                        <span className="font-semibold text-lg">$10,000.00</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Available Cash:</span>
+                        <span className="font-medium">$8,500.00</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Total P&L:</span>
+                        <span className="font-medium text-green-600">+$250.00 (+2.5%)</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Active Positions:</span>
+                        <span className="font-medium">3</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Alerts Section */}
+        {viewMode === 'alerts' && (
+          <>
+            <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-gray-900">🔔 Alert & Notification System</h2>
+                <div className="flex gap-3">
+                  <button 
+                    onClick={() => alertSystem.startMonitoring()}
+                    className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+                  >
+                    ▶️ Start Monitoring
+                  </button>
+                  <button 
+                    onClick={() => alertSystem.stopMonitoring()}
+                    className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+                  >
+                    ⏹️ Stop Monitoring
+                  </button>
+                  <button 
+                    onClick={fetchPhase2Data}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    🔄 Refresh Alerts
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-900">Active Alerts</h3>
+                {alerts.length > 0 ? alerts.map((alert, index) => (
+                  <div key={index} className="border border-gray-200 rounded-lg p-4">
+                    <div className="flex justify-between items-start mb-3">
+                      <div>
+                        <h4 className="font-semibold text-gray-900">{alert.symbol} Alert</h4>
+                        <p className="text-sm text-gray-600">{alert.message}</p>
+                      </div>
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${
+                        alert.priority === 'HIGH' ? 'bg-red-100 text-red-800' :
+                        alert.priority === 'MEDIUM' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-blue-100 text-blue-800'
+                      }`}>
+                        {alert.priority}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Type: {alert.type}</span>
+                      <span className="text-gray-600">{alert.timestamp}</span>
+                    </div>
+                  </div>
+                )) : (
+                  <div className="text-center py-8">
+                    <p className="text-gray-600">No active alerts. Start monitoring to receive notifications!</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Strategies Section */}
+        {viewMode === 'strategies' && (
+          <>
+            <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-gray-900">⚡ Strategy Builder</h2>
+                <div className="flex gap-3">
+                  <button 
+                    onClick={() => strategyBuilder.createFromTemplate('momentum', 'My Momentum Strategy')}
+                    className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
+                  >
+                    ✨ Create from Template
+                  </button>
+                  <button 
+                    onClick={() => strategyBuilder.createStrategy('Custom Strategy', 'My custom trading strategy')}
+                    className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+                  >
+                    ➕ New Strategy
+                  </button>
+                  <button 
+                    onClick={fetchPhase2Data}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    🔄 Refresh Strategies
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-1 lg:grid-cols-2 gap-6">
+                {strategies.length > 0 ? strategies.map((strategy, index) => (
+                  <div key={index} className="border border-gray-200 rounded-lg p-4">
+                    <div className="flex justify-between items-start mb-3">
+                      <div>
+                        <h4 className="font-semibold text-gray-900">{strategy.name}</h4>
+                        <p className="text-sm text-gray-600">{strategy.description}</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${
+                          strategy.settings?.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {strategy.settings?.active ? 'ACTIVE' : 'INACTIVE'}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-sm space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Rules:</span>
+                        <span className="font-medium">{strategy.rules?.length || 0}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Win Rate:</span>
+                        <span className="font-medium">{strategy.performance?.winRate?.toFixed(1) || '0.0'}%</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Profit Factor:</span>
+                        <span className="font-medium">{strategy.performance?.profitFactor?.toFixed(2) || '0.00'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Risk Level:</span>
+                        <span className={`font-medium ${
+                          strategy.riskManagement?.riskLevel === 'high' ? 'text-red-600' :
+                          strategy.riskManagement?.riskLevel === 'medium' ? 'text-yellow-600' :
+                          'text-green-600'
+                        }`}>
+                          {strategy.riskManagement?.riskLevel?.toUpperCase() || 'MEDIUM'}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="mt-3 flex gap-2">
+                      <button 
+                        onClick={() => strategy.settings?.active ? 
+                          strategyBuilder.deactivateStrategy(strategy.id) : 
+                          strategyBuilder.activateStrategy(strategy.id)}
+                        className={`px-3 py-1 rounded text-xs font-medium ${
+                          strategy.settings?.active 
+                            ? 'bg-red-100 text-red-700 hover:bg-red-200' 
+                            : 'bg-green-100 text-green-700 hover:bg-green-200'
+                        }`}
+                      >
+                        {strategy.settings?.active ? 'Deactivate' : 'Activate'}
+                      </button>
+                      <button 
+                        onClick={() => backtestEngine.runBacktest(strategy, {})}
+                        className="px-3 py-1 rounded text-xs font-medium bg-blue-100 text-blue-700 hover:bg-blue-200"
+                      >
+                        Backtest
+                      </button>
+                    </div>
+                  </div>
+                )) : (
+                  <div className="col-span-full text-center py-8">
+                    <p className="text-gray-600">No strategies created yet. Build your first trading strategy!</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Performance Section */}
+        {viewMode === 'performance' && (
+          <>
+            <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-gray-900">📊 Portfolio Performance Tracker</h2>
+                <div className="flex gap-3">
+                  <button 
+                    onClick={() => performanceTracker.calculateRiskMetrics()}
+                    className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors"
+                  >
+                    📈 Calculate Risk
+                  </button>
+                  <button 
+                    onClick={fetchPhase2Data}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    🔄 Refresh Metrics
+                  </button>
+                </div>
+              </div>
+
+              {performanceMetrics ? (
+                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200">
+                    <h3 className="text-sm font-medium text-blue-800 mb-2">Total Return</h3>
+                    <p className="text-2xl font-bold text-blue-900">
+                      {performanceMetrics.totalReturn?.toFixed(2) || '0.00'}%
+                    </p>
+                    <p className="text-xs text-blue-700">Since inception</p>
+                  </div>
+
+                  <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-4 border border-green-200">
+                    <h3 className="text-sm font-medium text-green-800 mb-2">Sharpe Ratio</h3>
+                    <p className="text-2xl font-bold text-green-900">
+                      {performanceMetrics.sharpeRatio?.toFixed(2) || '0.00'}
+                    </p>
+                    <p className="text-xs text-green-700">Risk-adjusted return</p>
+                  </div>
+
+                  <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-4 border border-purple-200">
+                    <h3 className="text-sm font-medium text-purple-800 mb-2">Win Rate</h3>
+                    <p className="text-2xl font-bold text-purple-900">
+                      {performanceMetrics.winRate?.toFixed(1) || '0.0'}%
+                    </p>
+                    <p className="text-xs text-purple-700">Successful trades</p>
+                  </div>
+
+                  <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-lg p-4 border border-red-200">
+                    <h3 className="text-sm font-medium text-red-800 mb-2">Max Drawdown</h3>
+                    <p className="text-2xl font-bold text-red-900">
+                      -{performanceMetrics.maxDrawdown?.toFixed(2) || '0.00'}%
+                    </p>
+                    <p className="text-xs text-red-700">Worst decline</p>
+                  </div>
+
+                  <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-lg p-4 border border-yellow-200">
+                    <h3 className="text-sm font-medium text-yellow-800 mb-2">Volatility</h3>
+                    <p className="text-2xl font-bold text-yellow-900">
+                      {performanceMetrics.volatility?.toFixed(2) || '0.00'}%
+                    </p>
+                    <p className="text-xs text-yellow-700">Annual volatility</p>
+                  </div>
+
+                  <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-lg p-4 border border-indigo-200">
+                    <h3 className="text-sm font-medium text-indigo-800 mb-2">Sortino Ratio</h3>
+                    <p className="text-2xl font-bold text-indigo-900">
+                      {performanceMetrics.sortinoRatio?.toFixed(2) || '0.00'}
+                    </p>
+                    <p className="text-xs text-indigo-700">Downside risk-adjusted</p>
+                  </div>
+
+                  <div className="bg-gradient-to-br from-teal-50 to-teal-100 rounded-lg p-4 border border-teal-200">
+                    <h3 className="text-sm font-medium text-teal-800 mb-2">Alpha</h3>
+                    <p className="text-2xl font-bold text-teal-900">
+                      {performanceMetrics.alpha?.toFixed(3) || '0.000'}
+                    </p>
+                    <p className="text-xs text-teal-700">Excess return vs benchmark</p>
+                  </div>
+
+                  <div className="bg-gradient-to-br from-pink-50 to-pink-100 rounded-lg p-4 border border-pink-200">
+                    <h3 className="text-sm font-medium text-pink-800 mb-2">Portfolio Grade</h3>
+                    <p className="text-2xl font-bold text-pink-900">
+                      {performanceMetrics.portfolioGrade || 'B+'}
+                    </p>
+                    <p className="text-xs text-pink-700">Overall rating</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-gray-600">No performance data available. Start trading to see your metrics!</p>
                 </div>
               )}
             </div>
