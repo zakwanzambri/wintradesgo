@@ -886,7 +886,14 @@ const Dashboard = () => {
                         <span className="text-yellow-600">⚠️</span>
                         <p className="text-yellow-800 font-medium">Price API Issue: {priceError}</p>
                         <button 
-                          onClick={() => fetchMarketPrices()} 
+                          onClick={async () => {
+                            try {
+                              await fetchMarketPrices();
+                              alert('✅ Market prices updated successfully!');
+                            } catch (error) {
+                              alert('❌ Error fetching prices: ' + error.message);
+                            }
+                          }}
                           className="ml-auto px-3 py-1 bg-yellow-600 text-white rounded text-sm hover:bg-yellow-700"
                         >
                           Retry
@@ -1477,13 +1484,31 @@ const Dashboard = () => {
                 <h2 className="text-2xl font-bold text-gray-900">📝 Paper Trading System</h2>
                 <div className="flex gap-3">
                   <button 
-                    onClick={() => paperTrading.placeOrder('BTCUSDT', 'BUY', 0.001, 0)}
+                    onClick={async () => {
+                      try {
+                        const currentPrice = marketPrices.BTC || 63000;
+                        await paperTrading.placeOrder('BTCUSDT', 'BUY', 0.001, currentPrice);
+                        fetchPhase2Data();
+                        alert('✅ BUY order placed successfully!');
+                      } catch (error) {
+                        alert('❌ Error placing BUY order: ' + error.message);
+                      }
+                    }}
                     className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
                   >
                     🟢 Buy BTC
                   </button>
                   <button 
-                    onClick={() => paperTrading.placeOrder('BTCUSDT', 'SELL', 0.001, 0)}
+                    onClick={async () => {
+                      try {
+                        const currentPrice = marketPrices.BTC || 63000;
+                        await paperTrading.placeOrder('BTCUSDT', 'SELL', 0.001, currentPrice);
+                        fetchPhase2Data();
+                        alert('✅ SELL order placed successfully!');
+                      } catch (error) {
+                        alert('❌ Error placing SELL order: ' + error.message);
+                      }
+                    }}
                     className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
                   >
                     🔴 Sell BTC
@@ -1573,13 +1598,29 @@ const Dashboard = () => {
                 <h2 className="text-2xl font-bold text-gray-900">🔔 Alert & Notification System</h2>
                 <div className="flex gap-3">
                   <button 
-                    onClick={() => alertSystem.startMonitoring()}
+                    onClick={async () => {
+                      try {
+                        await alertSystem.startMonitoring();
+                        alert('✅ Alert monitoring started!');
+                        fetchPhase2Data();
+                      } catch (error) {
+                        alert('❌ Error starting monitoring: ' + error.message);
+                      }
+                    }}
                     className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
                   >
                     ▶️ Start Monitoring
                   </button>
                   <button 
-                    onClick={() => alertSystem.stopMonitoring()}
+                    onClick={async () => {
+                      try {
+                        await alertSystem.stopMonitoring();
+                        alert('✅ Alert monitoring stopped!');
+                        fetchPhase2Data();
+                      } catch (error) {
+                        alert('❌ Error stopping monitoring: ' + error.message);
+                      }
+                    }}
                     className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
                   >
                     ⏹️ Stop Monitoring
@@ -1633,13 +1674,29 @@ const Dashboard = () => {
                 <h2 className="text-2xl font-bold text-gray-900">⚡ Strategy Builder</h2>
                 <div className="flex gap-3">
                   <button 
-                    onClick={() => strategyBuilder.createFromTemplate('momentum', 'My Momentum Strategy')}
+                    onClick={async () => {
+                      try {
+                        const newStrategy = await strategyBuilder.createFromTemplate('momentum', 'My Momentum Strategy');
+                        alert('✅ Strategy created from template: ' + newStrategy.name);
+                        fetchPhase2Data();
+                      } catch (error) {
+                        alert('❌ Error creating strategy: ' + error.message);
+                      }
+                    }}
                     className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
                   >
                     ✨ Create from Template
                   </button>
                   <button 
-                    onClick={() => strategyBuilder.createStrategy('Custom Strategy', 'My custom trading strategy')}
+                    onClick={async () => {
+                      try {
+                        const newStrategy = await strategyBuilder.createStrategy('Custom Strategy', 'My custom trading strategy');
+                        alert('✅ Custom strategy created: ' + newStrategy.name);
+                        fetchPhase2Data();
+                      } catch (error) {
+                        alert('❌ Error creating strategy: ' + error.message);
+                      }
+                    }}
                     className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
                   >
                     ➕ New Strategy
@@ -1695,9 +1752,20 @@ const Dashboard = () => {
                     </div>
                     <div className="mt-3 flex gap-2">
                       <button 
-                        onClick={() => strategy.settings?.active ? 
-                          strategyBuilder.deactivateStrategy(strategy.id) : 
-                          strategyBuilder.activateStrategy(strategy.id)}
+                        onClick={async () => {
+                          try {
+                            if (strategy.settings?.active) {
+                              await strategyBuilder.deactivateStrategy(strategy.id);
+                              alert('✅ Strategy deactivated: ' + strategy.name);
+                            } else {
+                              await strategyBuilder.activateStrategy(strategy.id);
+                              alert('✅ Strategy activated: ' + strategy.name);
+                            }
+                            fetchPhase2Data();
+                          } catch (error) {
+                            alert('❌ Error toggling strategy: ' + error.message);
+                          }
+                        }}
                         className={`px-3 py-1 rounded text-xs font-medium ${
                           strategy.settings?.active 
                             ? 'bg-red-100 text-red-700 hover:bg-red-200' 
@@ -1707,7 +1775,20 @@ const Dashboard = () => {
                         {strategy.settings?.active ? 'Deactivate' : 'Activate'}
                       </button>
                       <button 
-                        onClick={() => backtestEngine.runBacktest(strategy, {})}
+                        onClick={async () => {
+                          try {
+                            const historicalData = await fetchHistoricalData('BTCUSDT');
+                            if (historicalData) {
+                              const result = await backtestEngine.backtestStrategy(strategy.id, historicalData);
+                              alert('✅ Backtest completed! Win Rate: ' + result.metrics.winRate.toFixed(1) + '%');
+                              fetchPhase2Data();
+                            } else {
+                              alert('❌ Unable to fetch historical data for backtesting');
+                            }
+                          } catch (error) {
+                            alert('❌ Error running backtest: ' + error.message);
+                          }
+                        }}
                         className="px-3 py-1 rounded text-xs font-medium bg-blue-100 text-blue-700 hover:bg-blue-200"
                       >
                         Backtest
@@ -1732,7 +1813,15 @@ const Dashboard = () => {
                 <h2 className="text-2xl font-bold text-gray-900">📊 Portfolio Performance Tracker</h2>
                 <div className="flex gap-3">
                   <button 
-                    onClick={() => performanceTracker.calculateRiskMetrics()}
+                    onClick={async () => {
+                      try {
+                        const riskMetrics = await performanceTracker.calculateRiskMetrics();
+                        alert('✅ Risk metrics calculated successfully!');
+                        fetchPhase2Data();
+                      } catch (error) {
+                        alert('❌ Error calculating risk metrics: ' + error.message);
+                      }
+                    }}
                     className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors"
                   >
                     📈 Calculate Risk
