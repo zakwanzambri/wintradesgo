@@ -1,7 +1,11 @@
 <?php
 /**
  * Technical Analysis Engine
- * Calculates real trading indicators and generates    /**
+ * Calculates real trading indicators and generates signals
+ */
+class TechnicalAnalysis {
+    
+    /**
      * Calculate all technical indicators at once
      */
     public function calculateAllIndicators($prices) {
@@ -324,26 +328,10 @@
             'fibonacci' => ['trend' => 'sideways'],
             'signals' => ['overall_signal' => 'HOLD', 'signals' => [], 'confidence' => 50]
         ];
-    }nals
- */
+    }
+}
 
-class TechnicalAnalysis {
-    
-    /**
-     * Calculate Relative Strength Index (RSI)
-     * @param array $prices Array of price values
-     * @param int $period RSI period (default 14)
-     * @return float RSI value (0-100)
-     */
-    public function calculateRSI($prices, $period = 14) {
-        if (count($prices) < $period + 1) {
-            return 50; // Neutral if not enough data
-        }
-        
-        $gains = [];
-        $losses = [];
-        
-        // Calculate price changes
+?>
         for ($i = 1; $i < count($prices); $i++) {
             $change = $prices[$i] - $prices[$i - 1];
             $gains[] = $change > 0 ? $change : 0;
@@ -430,6 +418,40 @@ class TechnicalAnalysis {
     }
     
     /**
+     * Calculate Relative Strength Index (RSI)
+     * @param array $prices Array of price values
+     * @param int $period RSI period (default 14)
+     * @return float RSI value (0-100)
+     */
+    public function calculateRSI($prices, $period = 14) {
+        if (count($prices) < $period + 1) {
+            return 50; // Neutral if not enough data
+        }
+        
+        $gains = [];
+        $losses = [];
+        
+        // Calculate price changes
+        for ($i = 1; $i < count($prices); $i++) {
+            $change = $prices[$i] - $prices[$i - 1];
+            $gains[] = $change > 0 ? $change : 0;
+            $losses[] = $change < 0 ? abs($change) : 0;
+        }
+        
+        // Get recent gains and losses
+        $recentGains = array_slice($gains, -$period);
+        $recentLosses = array_slice($losses, -$period);
+        
+        $avgGain = array_sum($recentGains) / $period;
+        $avgLoss = array_sum($recentLosses) / $period;
+        
+        if ($avgLoss == 0) return 100; // No losses = RSI 100
+        
+        $rs = $avgGain / $avgLoss;
+        $rsi = 100 - (100 / (1 + $rs));
+        
+        return round($rsi, 2);
+    }
      * Calculate Bollinger Bands
      * @param array $prices Array of price values
      * @param int $period Period for calculation (default 20)
