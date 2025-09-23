@@ -24,7 +24,7 @@ function simple_test_strategy($data, $index) {
 echo "🧪 Testing Portfolio Updates\n";
 echo "==============================\n\n";
 
-$results = $engine->runBacktest($marketData, 'simple_test_strategy');
+$results = $engine->runBacktest('simple_test_strategy', $marketData);
 
 echo "📊 Results:\n";
 echo "   Initial: $10,000\n";

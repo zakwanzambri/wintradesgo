@@ -255,8 +255,8 @@ class ProfessionalBacktestEngine {
     /**
      * Execute trade with realistic costs
      */
-    private function executeTrade($portfolio, $signal, $candle, $index) {
-        $currentPrice = $candle['close'];
+    private function executeTrade(&$portfolio, $signal, $candle, $index) {
+        $currentPrice = $candle['close'] ?? $candle['price'];
         $timestamp = $candle['timestamp'];
         
         // Calculate slippage
@@ -274,11 +274,13 @@ class ProfessionalBacktestEngine {
             
             // Open long position
             $openTrade = $this->openLongPosition($portfolio, $executionPrice, $timestamp, $signal);
-            if ($openTrade && !$trade) $trade = $openTrade;
+            if ($openTrade && !$trade) {
+                $trade = $openTrade;
+            }
             
-        } elseif ($signal['action'] === 'SELL' && $portfolio['position'] >= 0) {
-            // Close long position if exists, then go short
+        } elseif ($signal['action'] === 'SELL') {
             if ($portfolio['position'] > 0) {
+                // Close long position if exists
                 $closeTrade = $this->closePosition($portfolio, $executionPrice, $timestamp, 'Sell Long');
                 if ($closeTrade) $trade = $closeTrade;
             }
@@ -309,6 +311,10 @@ class ProfessionalBacktestEngine {
      * Open long position
      */
     private function openLongPosition(&$portfolio, $price, $timestamp, $signal) {
+        if ($price <= 0) {
+            return null; // Invalid price
+        }
+        
         $availableCash = $portfolio['cash'] * $this->maxPositionSize;
         $shares = floor($availableCash / $price);
         $cost = $shares * $price;
@@ -381,7 +387,7 @@ class ProfessionalBacktestEngine {
      */
     private function calculatePortfolioValue($portfolio, $candle) {
         $cash = $portfolio['cash'];
-        $positionValue = $portfolio['shares'] * $candle['close'];
+        $positionValue = $portfolio['shares'] * ($candle['close'] ?? $candle['price']);
         return $cash + $positionValue;
     }
     
