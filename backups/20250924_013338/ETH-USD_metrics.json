@@ -1,0 +1,10 @@
+{
+  "symbol": "ETH-USD",
+  "train_loss": 4557907.0,
+  "val_loss": 15241472.0,
+  "train_accuracy": 49.26108374384236,
+  "val_accuracy": 47.05882352941176,
+  "training_date": "2025-09-24T01:30:00.381553",
+  "data_points": 256,
+  "features": 11
+}

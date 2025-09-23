@@ -1,0 +1,10 @@
+{
+  "symbol": "AAPL",
+  "train_loss": 5273.47607421875,
+  "val_loss": 9767.2021484375,
+  "train_accuracy": 52.25225225225225,
+  "val_accuracy": 53.57142857142857,
+  "training_date": "2025-09-24T01:33:54.281912",
+  "data_points": 141,
+  "features": 11
+}

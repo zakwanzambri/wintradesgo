@@ -1,6 +1,6 @@
 {
   "retraining_frequency_hours": 24,
-  "python_executable": "python",
+  "python_executable": "py",
   "pipeline_script": "model_retraining_pipeline.py",
   "max_execution_time": 3600,
   "email_notifications": false,

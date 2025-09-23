@@ -471,15 +471,15 @@ class ModelRetrainingPipeline:
 
 def main():
     """Main execution function"""
-    print("🤖 LSTM Model Retraining Pipeline")
+    print("LSTM Model Retraining Pipeline")
     print("=" * 40)
     
     pipeline = ModelRetrainingPipeline()
     results = pipeline.run_full_pipeline()
     
-    print(f"\n✅ Pipeline Results:")
+    print(f"\nPipeline Results:")
     for symbol, success in results.items():
-        status = "✅ SUCCESS" if success else "❌ FAILED"
+        status = "SUCCESS" if success else "FAILED"
         print(f"   {symbol}: {status}")
 
 if __name__ == "__main__":
