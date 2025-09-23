@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 3 ML Integration - Working Version</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #1a1a2e;
+            color: white;
+            padding: 20px;
+            margin: 0;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .card {
+            background: #16213e;
+            border: 1px solid #0f4c75;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .btn {
+            background: #3282b8;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .btn:hover { background: #2a6ea6; }
+        .btn:disabled { background: #666; cursor: not-allowed; }
+        .result {
+            background: #0f3460;
+            border-left: 4px solid #3282b8;
+            padding: 15px;
+            margin-top: 10px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .error { border-left-color: #e74c3c; background: #2c1810; }
+        .success { border-left-color: #27ae60; background: #0e2818; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔌 Phase 3 ML Integration Test</h1>
+        <p>Testing all Phase 3 ML components via direct API calls</p>
+
+        <div class="card">
+            <h2>System Status</h2>
+            <button class="btn" onclick="testStatus()">🔄 Test System Status</button>
+            <div id="statusResult" class="result" style="display: none;"></div>
+        </div>
+
+        <div class="card">
+            <h2>Component Tests</h2>
+            <button class="btn" onclick="testEnsemble()">🚀 Test Ensemble</button>
+            <button class="btn" onclick="testLSTM()">🧠 Test LSTM</button>
+            <button class="btn" onclick="testSentiment()">📊 Test Sentiment</button>
+            <button class="btn" onclick="testBacktest()">⚙️ Test Backtest</button>
+            <div id="componentResult" class="result" style="display: none;"></div>
+        </div>
+
+        <div class="card">
+            <h2>Batch Test</h2>
+            <button class="btn" onclick="testBatch()">🎯 Test All Symbols</button>
+            <div id="batchResult" class="result" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        function showResult(elementId, data, isError = false) {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.className = `result ${isError ? 'error' : 'success'}`;
+            element.textContent = isError ? `❌ Error: ${data}` : `✅ Success:\n${JSON.stringify(data, null, 2)}`;
+        }
+
+        async function simpleAPICall(action, params = {}) {
+            try {
+                let url = '/wintradesgo/api/ml/phase3.php?action=' + action;
+                
+                // Add parameters manually
+                for (const [key, value] of Object.entries(params)) {
+                    url += '&' + key + '=' + encodeURIComponent(value);
+                }
+                
+                console.log('API URL:', url);
+                
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+
+                console.log('Response status:', response.status);
+                console.log('Response headers:', [...response.headers.entries()]);
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+
+                const text = await response.text();
+                console.log('Raw response:', text);
+
+                const data = JSON.parse(text);
+                console.log('Parsed data:', data);
+
+                if (!data.success) {
+                    throw new Error(data.error || 'API returned error');
+                }
+
+                return data.data;
+            } catch (error) {
+                console.error('API Error:', error);
+                throw error;
+            }
+        }
+
+        async function testStatus() {
+            try {
+                const data = await simpleAPICall('status');
+                showResult('statusResult', data);
+            } catch (error) {
+                showResult('statusResult', error.message, true);
+            }
+        }
+
+        async function testEnsemble() {
+            try {
+                const data = await simpleAPICall('ensemble_prediction', { symbol: 'BTC-USD' });
+                showResult('componentResult', data);
+            } catch (error) {
+                showResult('componentResult', error.message, true);
+            }
+        }
+
+        async function testLSTM() {
+            try {
+                const data = await simpleAPICall('lstm_prediction', { symbol: 'BTC-USD' });
+                showResult('componentResult', data);
+            } catch (error) {
+                showResult('componentResult', error.message, true);
+            }
+        }
+
+        async function testSentiment() {
+            try {
+                const data = await simpleAPICall('sentiment_analysis', { symbol: 'BTC-USD' });
+                showResult('componentResult', data);
+            } catch (error) {
+                showResult('componentResult', error.message, true);
+            }
+        }
+
+        async function testBacktest() {
+            try {
+                const data = await simpleAPICall('backtest_strategy', { 
+                    strategy: 'technical_strategy', 
+                    symbol: 'BTC-USD' 
+                });
+                showResult('componentResult', data);
+            } catch (error) {
+                showResult('componentResult', error.message, true);
+            }
+        }
+
+        async function testBatch() {
+            try {
+                const data = await simpleAPICall('batch_predictions', { 
+                    symbols: 'BTC-USD,ETH-USD,AAPL' 
+                });
+                showResult('batchResult', data);
+            } catch (error) {
+                showResult('batchResult', error.message, true);
+            }
+        }
+
+        // Auto-test status on load
+        window.addEventListener('load', () => {
+            console.log('Page loaded, testing API...');
+            setTimeout(testStatus, 1000);
+        });
+    </script>
+</body>
+</html>

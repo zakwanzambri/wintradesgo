@@ -159,19 +159,19 @@
     </div>
 
     <script>
-        const API_BASE = './api/ml/phase3.php';
+        const API_BASE = '/wintradesgo/api/ml/phase3.php';
 
         async function callAPI(action, params = {}) {
-            const url = new URL(API_BASE);
-            url.searchParams.append('action', action);
+            // Build URL manually instead of using URL constructor
+            let url = API_BASE + '?action=' + encodeURIComponent(action);
             
             Object.entries(params).forEach(([key, value]) => {
-                url.searchParams.append(key, value);
+                url += '&' + encodeURIComponent(key) + '=' + encodeURIComponent(value);
             });
 
             try {
-                console.log('Calling API:', url.toString());
-                const response = await fetch(url.toString());
+                console.log('Calling API:', url);
+                const response = await fetch(url);
                 console.log('Response status:', response.status);
                 
                 if (!response.ok) {
