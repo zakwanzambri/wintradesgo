@@ -1,5 +1,7 @@
 ﻿import React, { useState, useEffect } from "react";
 import AITradingSignals from '../utils/AITradingSignals.js';
+
+const Dashboard = () => {
   const [viewMode, setViewMode] = useState("overview");
   const [aiSignals, setAiSignals] = useState([]);
   const [portfolioData, setPortfolioData] = useState([]);
