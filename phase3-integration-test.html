@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 3 ML Integration Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            color: white;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .title {
+            font-size: 3rem;
+            font-weight: bold;
+            background: linear-gradient(45deg, #60a5fa, #a855f7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            font-size: 1.2rem;
+            color: #94a3b8;
+            margin-bottom: 30px;
+        }
+        .card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .btn {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s;
+            width: 100%;
+            margin-top: 16px;
+        }
+        .btn:hover {
+            background: #2563eb;
+        }
+        .btn:disabled {
+            background: #6b7280;
+            cursor: not-allowed;
+        }
+        .loading {
+            opacity: 0.6;
+        }
+        .result {
+            margin-top: 16px;
+            padding: 16px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 14px;
+            white-space: pre-wrap;
+        }
+        .success {
+            background: rgba(34, 197, 94, 0.2);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            color: #86efac;
+        }
+        .error {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+        .healthy { background: #22c55e; color: white; }
+        .warning { background: #f59e0b; color: white; }
+        .error { background: #ef4444; color: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 class="title">🔌 Phase 3 ML Integration</h1>
+            <p class="subtitle">Real-time testing of Phase 3 ML components integration</p>
+            <button class="btn" onclick="refreshSystemStatus()">🔄 Refresh System Status</button>
+        </div>
+
+        <!-- System Status -->
+        <div class="card">
+            <h2>📊 System Status Overview</h2>
+            <div id="systemStatus">Click "Refresh System Status" to check components...</div>
+        </div>
+
+        <!-- Component Tests -->
+        <div class="grid">
+            <!-- Ensemble System -->
+            <div class="card">
+                <h3>🚀 Ensemble Trading System</h3>
+                <p>Test complete ensemble prediction system combining all ML components</p>
+                <button class="btn" onclick="testEnsemble()">Test Ensemble Prediction</button>
+                <div id="ensembleResult" class="result" style="display: none;"></div>
+            </div>
+
+            <!-- LSTM Bridge -->
+            <div class="card">
+                <h3>🧠 Enhanced LSTM Bridge</h3>
+                <p>Test enhanced LSTM neural network predictions</p>
+                <button class="btn" onclick="testLSTM()">Test LSTM Prediction</button>
+                <div id="lstmResult" class="result" style="display: none;"></div>
+            </div>
+
+            <!-- Sentiment Analysis -->
+            <div class="card">
+                <h3>📈 Real Sentiment Analysis</h3>
+                <p>Test real-time sentiment analysis from multiple sources</p>
+                <button class="btn" onclick="testSentiment()">Test Sentiment Analysis</button>
+                <div id="sentimentResult" class="result" style="display: none;"></div>
+            </div>
+
+            <!-- Backtest Engine -->
+            <div class="card">
+                <h3>⚙️ Professional Backtest Engine</h3>
+                <p>Test professional backtesting with transaction costs and metrics</p>
+                <button class="btn" onclick="testBacktest()">Test Backtest Engine</button>
+                <div id="backtestResult" class="result" style="display: none;"></div>
+            </div>
+        </div>
+
+        <!-- Batch Testing -->
+        <div class="card">
+            <h2>🎯 Batch Testing</h2>
+            <p>Test multiple symbols at once using ensemble system</p>
+            <button class="btn" onclick="testBatch()">Test All Symbols (BTC-USD, ETH-USD, AAPL)</button>
+            <div id="batchResult" class="result" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost/wintradesgo/api/ml/phase3.php';
+
+        async function callAPI(action, params = {}) {
+            const url = new URL(API_BASE);
+            url.searchParams.append('action', action);
+            
+            Object.entries(params).forEach(([key, value]) => {
+                url.searchParams.append(key, value);
+            });
+
+            try {
+                console.log('Calling API:', url.toString());
+                const response = await fetch(url.toString());
+                console.log('Response status:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('API Response:', data);
+                
+                if (!data.success) {
+                    throw new Error(data.error || 'API call failed');
+                }
+                
+                return data.data;
+            } catch (error) {
+                console.error('API call error:', error);
+                throw error;
+            }
+        }
+
+        function showResult(elementId, data, isError = false) {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.className = `result ${isError ? 'error' : 'success'}`;
+            element.textContent = isError ? `Error: ${data}` : JSON.stringify(data, null, 2);
+        }
+
+        function setLoading(buttonElement, loading = true) {
+            buttonElement.disabled = loading;
+            buttonElement.classList.toggle('loading', loading);
+            if (loading) {
+                buttonElement.textContent = buttonElement.textContent.replace('Test', 'Testing...');
+            } else {
+                buttonElement.textContent = buttonElement.textContent.replace('Testing...', 'Test');
+            }
+        }
+
+        async function refreshSystemStatus() {
+            const button = event.target;
+            setLoading(button, true);
+            
+            try {
+                const data = await callAPI('status');
+                
+                let html = '<h4>Components Status:</h4>';
+                Object.entries(data.components).forEach(([component, info]) => {
+                    const statusClass = info.status.toLowerCase() === 'healthy' ? 'healthy' : 
+                                       info.status.toLowerCase() === 'warning' ? 'warning' : 'error';
+                    html += `<div><strong>${component.toUpperCase()}</strong>
+                             <span class="status-badge ${statusClass}">${info.status}</span>`;
+                    
+                    if (info.models_available !== undefined) {
+                        html += ` - ${info.models_available} models available`;
+                    }
+                    if (info.sources && info.sources.length > 0) {
+                        html += ` - Sources: ${info.sources.join(', ')}`;
+                    }
+                    html += '</div>';
+                });
+                
+                document.getElementById('systemStatus').innerHTML = html;
+            } catch (error) {
+                document.getElementById('systemStatus').innerHTML = `<div class="error">Error: ${error.message}</div>`;
+            } finally {
+                setLoading(button, false);
+            }
+        }
+
+        async function testEnsemble() {
+            const button = event.target;
+            setLoading(button, true);
+            
+            try {
+                const data = await callAPI('ensemble_prediction', { symbol: 'BTC-USD' });
+                showResult('ensembleResult', data);
+            } catch (error) {
+                showResult('ensembleResult', error.message, true);
+            } finally {
+                setLoading(button, false);
+            }
+        }
+
+        async function testLSTM() {
+            const button = event.target;
+            setLoading(button, true);
+            
+            try {
+                const data = await callAPI('lstm_prediction', { symbol: 'BTC-USD' });
+                showResult('lstmResult', data);
+            } catch (error) {
+                showResult('lstmResult', error.message, true);
+            } finally {
+                setLoading(button, false);
+            }
+        }
+
+        async function testSentiment() {
+            const button = event.target;
+            setLoading(button, true);
+            
+            try {
+                const data = await callAPI('sentiment_analysis', { symbol: 'BTC-USD' });
+                showResult('sentimentResult', data);
+            } catch (error) {
+                showResult('sentimentResult', error.message, true);
+            } finally {
+                setLoading(button, false);
+            }
+        }
+
+        async function testBacktest() {
+            const button = event.target;
+            setLoading(button, true);
+            
+            try {
+                const data = await callAPI('backtest_strategy', { 
+                    strategy: 'technical_strategy', 
+                    symbol: 'BTC-USD' 
+                });
+                showResult('backtestResult', data);
+            } catch (error) {
+                showResult('backtestResult', error.message, true);
+            } finally {
+                setLoading(button, false);
+            }
+        }
+
+        async function testBatch() {
+            const button = event.target;
+            setLoading(button, true);
+            
+            try {
+                const data = await callAPI('batch_predictions', { 
+                    symbols: 'BTC-USD,ETH-USD,AAPL' 
+                });
+                showResult('batchResult', data);
+            } catch (error) {
+                showResult('batchResult', error.message, true);
+            } finally {
+                setLoading(button, false);
+            }
+        }
+
+        // Auto-load system status on page load
+        window.addEventListener('load', () => {
+            setTimeout(refreshSystemStatus, 1000);
+        });
+    </script>
+</body>
+</html>

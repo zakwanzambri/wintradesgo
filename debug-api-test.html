@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Debug Test</title>
+</head>
+<body>
+    <h1>API Debug Test</h1>
+    <button onclick="testAPI()">Test API</button>
+    <div id="result"></div>
+
+    <script>
+        async function testAPI() {
+            console.log('Testing API...');
+            
+            try {
+                // Test direct fetch
+                const response = await fetch('http://localhost/wintradesgo/api/ml/phase3.php?action=status');
+                console.log('Response:', response);
+                console.log('Status:', response.status);
+                console.log('OK:', response.ok);
+                
+                const text = await response.text();
+                console.log('Response text:', text);
+                
+                document.getElementById('result').innerHTML = '<pre>' + text + '</pre>';
+                
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('result').innerHTML = 'Error: ' + error.message;
+            }
+        }
+    </script>
+</body>
+</html>
