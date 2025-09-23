@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Binance REST API Fallback Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
+        .test-result { padding: 15px; margin: 10px 0; border-radius: 8px; }
+        .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .loading { background-color: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        .price-display { font-size: 20px; font-weight: bold; margin: 10px 0; }
+        button { padding: 12px 24px; font-size: 16px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        button:disabled { opacity: 0.6; cursor: not-allowed; }
+        .log { background: #f8f9fa; padding: 15px; border-radius: 5px; max-height: 400px; overflow-y: auto; font-family: monospace; font-size: 14px; white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Binance API Implementation Test</h1>
+    <p>This tests the <strong>optimized pure Binance implementation</strong> (no CoinGecko)</p>
+    
+    <div id="test-status" class="test-result loading">
+        Ready to test REST API fallback system
+    </div>
+    
+    <button id="test-btn" onclick="runTest()">🚀 Test Binance REST API</button>
+    
+    <div class="price-display">
+        <div>BTC: $<span id="btc-price">Not tested</span></div>
+        <div>ETH: $<span id="eth-price">Not tested</span></div>
+        <div>ADA: $<span id="ada-price">Not tested</span></div>
+    </div>
+    
+    <h3>📝 Test Log:</h3>
+    <div id="log" class="log">Ready to run tests...\n</div>
+
+    <script>
+        const statusEl = document.getElementById('test-status');
+        const logEl = document.getElementById('log');
+        const testBtn = document.getElementById('test-btn');
+        const btcEl = document.getElementById('btc-price');
+        const ethEl = document.getElementById('eth-price');
+        const adaEl = document.getElementById('ada-price');
+
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            logEl.textContent += `[${timestamp}] ${message}\n`;
+            logEl.scrollTop = logEl.scrollHeight;
+            console.log(message);
+        }
+
+        async function runTest() {
+            testBtn.disabled = true;
+            testBtn.textContent = '⏳ Testing...';
+            
+            statusEl.className = 'test-result loading';
+            statusEl.textContent = 'Testing Binance REST API...';
+            
+            log('🔬 Starting Binance REST API Fallback Test...');
+            log('📡 Testing the same endpoints used by the dashboard...');
+            
+            const symbols = ['BTCUSDT', 'ETHUSDT', 'ADAUSDT'];
+            
+            try {
+                log('⏳ Fetching prices from Binance REST API...');
+                
+                // Add timeout like in the dashboard
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000);
+                
+                const requests = symbols.map(symbol => {
+                    log(`  → Requesting ${symbol}...`);
+                    return fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${symbol}`, {
+                        signal: controller.signal,
+                        headers: { 'Accept': 'application/json' }
+                    });
+                });
+                
+                const responses = await Promise.all(requests);
+                clearTimeout(timeoutId);
+                
+                log('✅ All requests completed');
+                
+                // Check if all responses are OK
+                responses.forEach((response, index) => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status} for ${symbols[index]}: ${response.statusText}`);
+                    }
+                    log(`✅ ${symbols[index]}: ${response.status} ${response.statusText}`);
+                });
+                
+                const dataArray = await Promise.all(responses.map(r => r.json()));
+                log('📊 Raw API Response: ' + JSON.stringify(dataArray, null, 2));
+                
+                // Parse exactly like the dashboard does
+                const prices = {
+                    BTC: parseFloat(dataArray[0]?.price) || null,
+                    ETH: parseFloat(dataArray[1]?.price) || null,
+                    ADA: parseFloat(dataArray[2]?.price) || null
+                };
+                
+                log('💰 Parsed Prices: ' + JSON.stringify(prices, null, 2));
+                
+                // Validate prices
+                if (!prices.BTC || !prices.ETH || !prices.ADA) {
+                    throw new Error('Incomplete price data from Binance');
+                }
+                
+                // Update UI
+                btcEl.textContent = prices.BTC.toLocaleString();
+                ethEl.textContent = prices.ETH.toLocaleString();
+                adaEl.textContent = prices.ADA.toLocaleString();
+                
+                log('✅ REST API Fallback Test PASSED!');
+                statusEl.className = 'test-result success';
+                statusEl.textContent = '✅ REST API Test PASSED - Pure Binance implementation working!';
+                
+            } catch (error) {
+                log(`❌ REST API Test FAILED: ${error.message}`);
+                statusEl.className = 'test-result error';
+                statusEl.textContent = `❌ Test FAILED: ${error.message}`;
+                
+                if (error.name === 'AbortError') {
+                    log('⏰ Request timed out after 10 seconds');
+                } else if (error.message.includes('CORS')) {
+                    log('🚫 CORS policy blocked the request');
+                } else if (error.message.includes('Failed to fetch')) {
+                    log('📡 Network connection failed');
+                }
+            } finally {
+                testBtn.disabled = false;
+                testBtn.textContent = '🔄 Test Again';
+            }
+        }
+    </script>
+</body>
+</html>

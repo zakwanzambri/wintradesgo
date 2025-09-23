@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Binance WebSocket Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .price { font-size: 24px; font-weight: bold; margin: 10px 0; }
+        .status { padding: 10px; border-radius: 5px; margin: 10px 0; }
+        .connected { background-color: #d4edda; color: #155724; }
+        .disconnected { background-color: #f8d7da; color: #721c24; }
+        .log { background: #f8f9fa; padding: 10px; border-radius: 5px; max-height: 400px; overflow-y: auto; font-family: monospace; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <h1>🚀 Binance WebSocket Real-Time Test</h1>
+    
+    <div id="status" class="status disconnected">Disconnected</div>
+    
+    <div class="price">
+        <div>BTC: $<span id="btc-price">Loading...</span></div>
+        <div>ETH: $<span id="eth-price">Loading...</span></div>
+        <div>ADA: $<span id="ada-price">Loading...</span></div>
+    </div>
+    
+    <h3>📝 Connection Log:</h3>
+    <div id="log" class="log"></div>
+
+    <script>
+        const statusEl = document.getElementById('status');
+        const logEl = document.getElementById('log');
+        const btcEl = document.getElementById('btc-price');
+        const ethEl = document.getElementById('eth-price');
+        const adaEl = document.getElementById('ada-price');
+
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            logEl.innerHTML += `[${timestamp}] ${message}<br>`;
+            logEl.scrollTop = logEl.scrollHeight;
+            console.log(message);
+        }
+
+        function connectWebSocket() {
+            log('🔌 Connecting to Binance WebSocket...');
+            
+            const streams = ['btcusdt@ticker', 'ethusdt@ticker', 'adausdt@ticker'];
+            const wsUrl = `wss://stream.binance.com:9443/stream?streams=${streams.join('/')}`;
+            
+            log(`📡 URL: ${wsUrl}`);
+            
+            const ws = new WebSocket(wsUrl);
+            
+            ws.onopen = () => {
+                log('✅ WebSocket Connected Successfully!');
+                statusEl.textContent = 'Connected to Binance WebSocket';
+                statusEl.className = 'status connected';
+            };
+            
+            ws.onmessage = (event) => {
+                try {
+                    if (event.data === 'ping') {
+                        ws.send('pong');
+                        log('🏓 Ping received, sent pong');
+                        return;
+                    }
+
+                    const data = JSON.parse(event.data);
+                    
+                    if (data.stream && data.data) {
+                        const streamName = data.stream;
+                        const tickerData = data.data;
+                        const price = parseFloat(tickerData.c);
+                        const priceChange = parseFloat(tickerData.P);
+                        
+                        if (price && price > 0) {
+                            const formattedPrice = price.toLocaleString();
+                            const changeText = `(${priceChange > 0 ? '+' : ''}${priceChange.toFixed(2)}%)`;
+                            
+                            if (streamName.includes('btcusdt')) {
+                                btcEl.textContent = formattedPrice;
+                                log(`💰 BTC: $${formattedPrice} ${changeText}`);
+                            } else if (streamName.includes('ethusdt')) {
+                                ethEl.textContent = formattedPrice;
+                                log(`💰 ETH: $${formattedPrice} ${changeText}`);
+                            } else if (streamName.includes('adausdt')) {
+                                adaEl.textContent = formattedPrice;
+                                log(`💰 ADA: $${formattedPrice} ${changeText}`);
+                            }
+                        }
+                    }
+                } catch (error) {
+                    log(`❌ Error parsing data: ${error.message}`);
+                }
+            };
+            
+            ws.onerror = (error) => {
+                log(`❌ WebSocket Error: ${error}`);
+                statusEl.textContent = 'WebSocket Error';
+                statusEl.className = 'status disconnected';
+            };
+            
+            ws.onclose = (event) => {
+                log(`🔌 WebSocket Closed: Code ${event.code}, Reason: ${event.reason || 'Unknown'}`);
+                statusEl.textContent = 'WebSocket Disconnected';
+                statusEl.className = 'status disconnected';
+                
+                // Auto-reconnect after 5 seconds
+                setTimeout(() => {
+                    log('🔄 Attempting to reconnect...');
+                    connectWebSocket();
+                }, 5000);
+            };
+        }
+
+        // Start connection
+        connectWebSocket();
+    </script>
+</body>
+</html>

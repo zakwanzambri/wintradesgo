@@ -10,6 +10,7 @@ import Dashboard from './pages/Dashboard'
 import Portfolio from './pages/Portfolio'
 import Pricing from './pages/Pricing'
 import SystemTest from './pages/SystemTest'
+import AITest from './pages/AITest'
 import './index.css'
 
 function App() {
@@ -86,6 +87,19 @@ function App() {
                   transition={{ duration: 0.3 }}
                 >
                   <SystemTest />
+                </motion.div>
+              } 
+            />
+            <Route 
+              path="/ai-test" 
+              element={
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <AITest />
                 </motion.div>
               } 
             />
