@@ -1,0 +1,21 @@
+{
+  "retraining_frequency_hours": 24,
+  "python_executable": "python",
+  "pipeline_script": "model_retraining_pipeline.py",
+  "max_execution_time": 3600,
+  "email_notifications": false,
+  "admin_email": "admin@wintradesgo.com",
+  "timezone": "UTC",
+  "auto_start": true,
+  "symbols": ["BTC-USD", "ETH-USD", "AAPL"],
+  "notification_settings": {
+    "send_on_failure": true,
+    "send_on_success": false,
+    "send_daily_summary": true
+  },
+  "performance_thresholds": {
+    "max_execution_time_minutes": 60,
+    "min_success_rate": 0.8,
+    "alert_on_consecutive_failures": 3
+  }
+}
