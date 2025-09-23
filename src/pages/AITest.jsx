@@ -123,7 +123,7 @@ const AITest = () => {
     
     try {
       // Test PHP AI Backend API
-      const response = await fetch('http://localhost:8080');
+      const response = await fetch('http://localhost:8081');
       const data = await response.json();
       
       if (data.status === 'success') {
