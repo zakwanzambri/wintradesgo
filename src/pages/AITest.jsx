@@ -123,35 +123,33 @@ const AITest = () => {
     
     try {
       // Test PHP AI Backend API
-      const response = await fetch('/api/signals/get.php');
+      const response = await fetch('http://localhost:8080');
       const data = await response.json();
       
-      if (data.signals && data.signals.length > 0) {
-        const latestSignal = data.signals[0];
+      if (data.status === 'success') {
         setBackendAI({
-          signal: latestSignal.signal_type,
-          confidence: latestSignal.confidence,
-          lstm: 'LSTM Active',
+          signal: data.ai_signal.signal_type,
+          confidence: data.ai_signal.confidence,
+          lstm: `LSTM Prediction: ${data.lstm_prediction.prediction.toFixed(4)}`,
+          rsi: data.technical_analysis.rsi,
+          macd: data.technical_analysis.macd.macd,
+          patterns: data.pattern_recognition,
+          performance: data.ai_performance,
           loading: false
         });
       } else {
-        // Generate new signal using PHP AI
-        const generateResponse = await fetch('/ai/AISignalGenerator.php?action=generate&symbol=bitcoin');
-        const generateData = await generateResponse.json();
-        
-        setBackendAI({
-          signal: generateData.signal_type || 'Generated',
-          confidence: generateData.confidence || 85,
-          lstm: 'LSTM Neural Network Active',
-          loading: false
-        });
+        throw new Error('Backend AI not available');
       }
     } catch (error) {
       console.error('Backend AI Error:', error);
       setBackendAI({
         signal: 'Backend not available',
         confidence: 0,
-        lstm: 'LSTM offline',
+        lstm: 'LSTM offline - Start PHP server',
+        rsi: 'N/A',
+        macd: 'N/A',
+        patterns: {},
+        performance: {},
         loading: false
       });
     }
@@ -255,6 +253,11 @@ const AITest = () => {
                 <div className="text-gray-300 text-sm mt-1">
                   50 hidden units, 60-day lookback
                 </div>
+                {backendAI.rsi && (
+                  <div className="text-gray-300 text-sm mt-2">
+                    RSI: {backendAI.rsi} | MACD: {backendAI.macd}
+                  </div>
+                )}
               </div>
 
               <div className="bg-gray-800/50 rounded-lg p-4">
@@ -268,6 +271,13 @@ const AITest = () => {
                 <div className="text-gray-300 mt-1">
                   Confidence: {backendAI.confidence}%
                 </div>
+                {backendAI.patterns && Object.keys(backendAI.patterns).length > 0 && (
+                  <div className="text-sm text-gray-400 mt-2">
+                    Patterns: {Object.entries(backendAI.patterns).map(([pattern, status]) => 
+                      status === 'DETECTED' ? pattern.replace('_', ' ') : null
+                    ).filter(Boolean).join(', ') || 'None detected'}
+                  </div>
+                )}
               </div>
 
               <button
@@ -282,7 +292,13 @@ const AITest = () => {
                 ✅ LSTM Neural Network<br/>
                 ✅ Pattern Recognition Engine<br/>
                 ✅ Sentiment Analysis<br/>
-                ✅ Database storage
+                ✅ Database storage<br/>
+                {backendAI.performance && backendAI.performance.accuracy_7d && (
+                  <>
+                    📊 7d Accuracy: {backendAI.performance.accuracy_7d}<br/>
+                    💰 Profitable: {backendAI.performance.profitable_signals}
+                  </>
+                )}
               </div>
             </div>
           </motion.div>
