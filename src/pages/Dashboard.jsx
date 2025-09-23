@@ -1,11 +1,23 @@
 ﻿import React, { useState, useEffect } from "react";
 import AITradingSignals from '../utils/AITradingSignals.js';
+import BacktestingEngine from '../utils/BacktestingEngine.js';
+import PaperTradingSystem from '../utils/PaperTradingSystem.js';
+import AlertNotificationSystem from '../utils/AlertNotificationSystem.js';
+import PortfolioPerformanceTracker from '../utils/PortfolioPerformanceTracker.js';
+import MLPatternRecognition from '../utils/MLPatternRecognition.js';
+import StrategyBuilder from '../utils/StrategyBuilder.js';
 
 const Dashboard = () => {
   const [viewMode, setViewMode] = useState("overview");
+  const [activeTab, setActiveTab] = useState("signals"); // New unified tab system
   const [aiSignals, setAiSignals] = useState([]);
   const [portfolioData, setPortfolioData] = useState([]);
   const [patternData, setPatternData] = useState([]);
+  const [backtestResults, setBacktestResults] = useState([]);
+  const [paperTrades, setPaperTrades] = useState([]);
+  const [alerts, setAlerts] = useState([]);
+  const [strategies, setStrategies] = useState([]);
+  const [performanceMetrics, setPerformanceMetrics] = useState(null);
   const [loading, setLoading] = useState(false);
   const [portfolioLoading, setPortfolioLoading] = useState(false);
   const [patternLoading, setPatternLoading] = useState(false);
@@ -19,8 +31,14 @@ const Dashboard = () => {
   const [wsConnected, setWsConnected] = useState(false);
   const [wsConnections, setWsConnections] = useState({});
 
-  // Initialize AI Trading Signals engine
+  // Initialize all Phase 2 systems
   const aiEngine = React.useMemo(() => new AITradingSignals(), []);
+  const backtestEngine = React.useMemo(() => new BacktestingEngine(), []);
+  const paperTrading = React.useMemo(() => new PaperTradingSystem(), []);
+  const alertSystem = React.useMemo(() => new AlertNotificationSystem(), []);
+  const performanceTracker = React.useMemo(() => new PortfolioPerformanceTracker(), []);
+  const mlPatterns = React.useMemo(() => new MLPatternRecognition(), []);
+  const strategyBuilder = React.useMemo(() => new StrategyBuilder(), []);
 
   // WebSocket real-time price streaming (MUCH faster than REST API)
   const initializeWebSocket = () => {

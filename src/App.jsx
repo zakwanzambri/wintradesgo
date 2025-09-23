@@ -11,6 +11,7 @@ import Portfolio from './pages/Portfolio'
 import Pricing from './pages/Pricing'
 import SystemTest from './pages/SystemTest'
 import AITest from './pages/AITest'
+import EnhancedDashboard from './pages/EnhancedDashboard'
 import './index.css'
 
 function App() {
@@ -101,6 +102,21 @@ function App() {
                 >
                   <AITest />
                 </motion.div>
+              } 
+            />
+            <Route 
+              path="/enhanced-dashboard" 
+              element={
+                <ProtectedRoute>
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <EnhancedDashboard />
+                  </motion.div>
+                </ProtectedRoute>
               } 
             />
           </Routes>
