@@ -417,54 +417,171 @@ const Dashboard = () => {
     setPortfolioLoading(false);
   };
 
-  // Function to fetch REAL Pattern data
+  // Fetch Phase 2 Systems Data
+  const fetchPhase2Data = async () => {
+    try {
+      // Fetch backtest results
+      const backtests = backtestEngine.getRecentBacktests();
+      setBacktestResults(backtests.slice(0, 5)); // Latest 5 results
+
+      // Fetch paper trades
+      const paperTradingData = paperTrading.getPortfolio();
+      const recentTrades = paperTrading.getTradingHistory().slice(0, 10);
+      setPaperTrades(recentTrades);
+
+      // Fetch active alerts
+      const activeAlerts = alertSystem.getActiveAlerts();
+      setAlerts(activeAlerts.slice(0, 5));
+
+      // Fetch strategies
+      const allStrategies = strategyBuilder.getAllStrategies();
+      setStrategies(allStrategies);
+
+      // Fetch performance metrics
+      const metrics = performanceTracker.calculatePerformanceMetrics();
+      setPerformanceMetrics(metrics);
+
+      console.log('✅ Phase 2 data fetched successfully');
+    } catch (error) {
+      console.error('❌ Error fetching Phase 2 data:', error);
+    }
+  };
+
+  // Fetch historical data for pattern analysis
+  const fetchHistoricalData = async (symbol) => {
+    try {
+      const response = await fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=1h&limit=100`);
+      const data = await response.json();
+      
+      return {
+        highs: data.map(item => parseFloat(item[2])),
+        lows: data.map(item => parseFloat(item[3])),
+        opens: data.map(item => parseFloat(item[1])),
+        closes: data.map(item => parseFloat(item[4])),
+        volumes: data.map(item => parseFloat(item[5]))
+      };
+    } catch (error) {
+      console.error('Error fetching historical data:', error);
+      return null;
+    }
+  };
+
+      // Fetch strategies
+      const allStrategies = strategyBuilder.getAllStrategies();
+      setStrategies(allStrategies);
+
+      // Fetch performance metrics
+      const metrics = performanceTracker.calculatePerformanceMetrics();
+      setPerformanceMetrics(metrics);
+
+      console.log('✅ Phase 2 data fetched successfully');
+    } catch (error) {
+      console.error('❌ Error fetching Phase 2 data:', error);
+    }
+  };
+
+  // Fetch historical data for pattern analysis
+  const fetchHistoricalData = async (symbol) => {
+    try {
+      const response = await fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=1h&limit=100`);
+      const data = await response.json();
+      
+      return {
+        highs: data.map(item => parseFloat(item[2])),
+        lows: data.map(item => parseFloat(item[3])),
+        opens: data.map(item => parseFloat(item[1])),
+        closes: data.map(item => parseFloat(item[4])),
+        volumes: data.map(item => parseFloat(item[5]))
+      };
+    } catch (error) {
+      console.error('Error fetching historical data:', error);
+      return null;
+    }
+  };
   const fetchPatternData = async () => {
     setPatternLoading(true);
-    console.log('🔍 Detecting REAL chart patterns...');
+    console.log('🔍 Detecting REAL patterns...');
     
     try {
-      // Use the real AI trading engine for pattern recognition
-      const analysis = await aiEngine.analyzeMultipleSymbols(['BTCUSDT', 'ETHUSDT', 'ADAUSDT', 'SOLUSDT'], '4h');
+      // Use the real ML pattern recognition engine
+      const symbols = ['BTCUSDT', 'ETHUSDT', 'ADAUSDT'];
+      const patternResults = [];
       
-      if (analysis && analysis.results && analysis.results.length > 0) {
-        const realPatterns = [];
-        
-        analysis.results.forEach(result => {
+      for (const symbol of symbols) {
+        // Get historical data for pattern analysis
+        const historicalData = await fetchHistoricalData(symbol);
+        if (historicalData) {
+          const patterns = await mlPatterns.detectPatterns(historicalData, symbol);
+          patternResults.push({
+            symbol: symbol.replace('USDT', ''),
+            patterns: patterns.patterns || [],
+            confidence: patterns.confidence || 0,
+            analysis: patterns.analysis || 'No analysis available',
+            signal: patterns.signal || 'HOLD'
+          });
+        }
+      }
+      
+      // Also use AI engine for additional pattern detection
+      const aiAnalysis = await aiEngine.analyzeMultipleSymbols(['BTCUSDT', 'ETHUSDT', 'ADAUSDT'], '4h');
+      
+      const realPatterns = [];
+      
+      // Combine ML patterns with AI patterns
+      patternResults.forEach(result => {
+        if (result.patterns && result.patterns.length > 0) {
+          result.patterns.forEach(pattern => {
+            realPatterns.push({
+              symbol: result.symbol,
+              pattern_type: pattern.name || 'Unknown',
+              confidence: (pattern.confidence * 100) || 0,
+              prediction: pattern.signal || 'NEUTRAL',
+              timeframe: '4H',
+              formation_completion: Math.min(95, (pattern.confidence * 100) + 10),
+              target_price: 0,
+              detected_at: new Date().toLocaleString(),
+              description: pattern.description || `${pattern.name} pattern detected`,
+              status: pattern.confidence > 0.75 ? 'CONFIRMED' : 'ACTIVE'
+            });
+          });
+        }
+      });
+      
+      // Add AI patterns if available
+      if (aiAnalysis && aiAnalysis.results) {
+        aiAnalysis.results.forEach(result => {
           if (result.patterns && result.patterns.length > 0) {
             result.patterns.forEach(pattern => {
               realPatterns.push({
-                symbol: result.symbol,
-                pattern_type: pattern.pattern,
-                confidence: pattern.confidence,
-                prediction: pattern.prediction,
+                symbol: result.symbol.replace('USDT', ''),
+                pattern_type: pattern.pattern || 'AI Pattern',
+                confidence: pattern.confidence || 0,
+                prediction: pattern.prediction || 'NEUTRAL',
                 timeframe: pattern.timeframe || '4H',
                 formation_completion: pattern.confidence > 80 ? 95 : pattern.confidence > 60 ? 80 : 65,
                 target_price: pattern.targetPrice || result.currentPrice * 1.05,
                 detected_at: new Date().toLocaleString(),
-                description: `Real ${pattern.pattern} pattern detected via AI analysis`,
-                support: pattern.support || result.marketStructure?.nearestSupport,
-                resistance: pattern.resistance || result.marketStructure?.nearestResistance,
+                description: `AI detected ${pattern.pattern} pattern`,
                 status: pattern.confidence > 75 ? 'CONFIRMED' : 'ACTIVE'
               });
             });
           }
         });
-        
-        if (realPatterns.length > 0) {
-          console.log('✅ Real patterns detected:', realPatterns);
-          setPatternData(realPatterns);
-        } else {
-          console.log('⚠️ No patterns found, using fallback');
-          setPatternData(getFallbackPatterns());
-        }
+      }
+      
+      if (realPatterns.length > 0) {
+        console.log('✅ Real patterns detected:', realPatterns);
+        setPatternData(realPatterns);
       } else {
-        console.log('⚠️ Pattern analysis failed, using fallback');
+        console.log('⚠️ No patterns found, using fallback');
         setPatternData(getFallbackPatterns());
       }
+      
     } catch (error) {
-      console.error('❌ Error with pattern recognition:', error);
+      console.error('❌ Error with pattern detection:', error);
       setPatternData(getFallbackPatterns());
     }
+    
     setPatternLoading(false);
   };
 
@@ -546,15 +663,18 @@ const Dashboard = () => {
 
   // Initial load with WebSocket
   useEffect(() => {
-    console.log('🚀 Initializing dashboard...');
+    console.log('🚀 Initializing unified Phase 2 dashboard...');
     
     // Start WebSocket for real-time prices
     initializeWebSocket();
     
-    // Fetch other data
+    // Fetch Phase 1 data
     fetchAISignals();
     fetchPortfolioData();
     fetchPatternData();
+    
+    // Fetch Phase 2 data
+    fetchPhase2Data();
     
     // Cleanup WebSocket on unmount
     return () => {
@@ -573,28 +693,34 @@ const Dashboard = () => {
   }, []);
 
   const tabs = [
-    { id: "overview", label: "Overview" },
-    { id: "signals", label: "AI Signals" },
-    { id: "portfolio", label: "Portfolio" },
-    { id: "patterns", label: "Patterns" }
+    { id: "overview", label: "Overview", icon: "📊" },
+    { id: "signals", label: "AI Signals", icon: "🤖" },
+    { id: "portfolio", label: "Portfolio", icon: "💼" },
+    { id: "patterns", label: "Patterns", icon: "🔍" },
+    { id: "backtest", label: "Backtesting", icon: "📈" },
+    { id: "paper", label: "Paper Trading", icon: "📝" },
+    { id: "alerts", label: "Alerts", icon: "🔔" },
+    { id: "strategies", label: "Strategies", icon: "⚡" },
+    { id: "performance", label: "Performance", icon: "📊" }
   ];
 
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white border-b shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-6">Trading Dashboard</h1>
-          <div className="flex space-x-2">
+          <h1 className="text-3xl font-bold text-gray-900 mb-6">🚀 Unified Trading Dashboard - Phase 2</h1>
+          <div className="flex flex-wrap gap-2">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setViewMode(tab.id)}
-                className={`px-6 py-3 rounded-lg font-medium transition-colors ${
+                className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
                   viewMode === tab.id 
                     ? "bg-blue-600 text-white shadow-sm" 
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                 }`}
               >
+                <span>{tab.icon}</span>
                 {tab.label}
               </button>
             ))}
