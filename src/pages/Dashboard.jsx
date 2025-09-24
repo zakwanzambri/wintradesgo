@@ -6,6 +6,7 @@ import AlertNotificationSystem from '../utils/AlertNotificationSystem.js';
 import PortfolioPerformanceTracker from '../utils/PortfolioPerformanceTracker.js';
 import MLPatternRecognition from '../utils/MLPatternRecognition.js';
 import StrategyBuilder from '../utils/StrategyBuilder.js';
+import MLPredictionWidget from '../components/MLPredictionWidget.jsx';
 
 const Dashboard = () => {
   const [viewMode, setViewMode] = useState("overview");
@@ -763,6 +764,11 @@ const Dashboard = () => {
                   })()}
                 </p>
               </div>
+            </div>
+
+            {/* Phase 3 ML Predictions Widget */}
+            <div className="bg-white rounded-lg border p-6 shadow-sm mb-8">
+              <MLPredictionWidget />
             </div>
 
             <div className="bg-white rounded-lg border p-6 shadow-sm">

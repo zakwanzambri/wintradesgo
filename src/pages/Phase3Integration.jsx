@@ -28,14 +28,24 @@ const Phase3Integration = () => {
   }, []);
 
   const callAPI = async (action, params = {}) => {
-    const url = new URL(API_BASE);
-    url.searchParams.append('action', action);
+    // Use proxy endpoints to avoid CORS issues
+    const proxyMap = {
+      'status': '/api/proxy/ml-status.php',
+      'ensemble_prediction': '/api/proxy/ml-prediction.php',
+      'sentiment_analysis': '/api/proxy/ml-sentiment.php'
+    };
     
-    Object.entries(params).forEach(([key, value]) => {
-      url.searchParams.append(key, value);
-    });
+    let url = proxyMap[action] || `/api/proxy/ml-${action}.php`;
+    
+    // Add parameters as query string
+    const queryParams = new URLSearchParams(params).toString();
+    if (queryParams) {
+      url += '?' + queryParams;
+    }
 
-    const response = await fetch(url.toString());
+    console.log('Calling proxy API:', url);
+
+    const response = await fetch(url);
     const data = await response.json();
     
     if (!data.success) {

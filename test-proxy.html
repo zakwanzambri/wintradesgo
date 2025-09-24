@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Proxy Approach</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #1a1a2e;
+            color: white;
+            padding: 20px;
+        }
+        .result {
+            background: #0f3460;
+            border-left: 4px solid #3282b8;
+            padding: 15px;
+            margin: 10px 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        .btn {
+            background: #3282b8;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test Proxy Approach for CORS Fix</h1>
+    
+    <button class="btn" onclick="testStatus()">Test Status Proxy</button>
+    <button class="btn" onclick="testPrediction()">Test Prediction Proxy</button>
+    <button class="btn" onclick="testSentiment()">Test Sentiment Proxy</button>
+    
+    <div id="result"></div>
+
+    <script>
+        async function testProxy(endpoint, params = '') {
+            try {
+                const url = `/wintradesgo/api/proxy/${endpoint}?${params}`;
+                console.log('Testing:', url);
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                document.getElementById('result').innerHTML = 
+                    `<div class="result">✅ SUCCESS: ${endpoint}\n${JSON.stringify(data, null, 2)}</div>`;
+                    
+            } catch (error) {
+                document.getElementById('result').innerHTML = 
+                    `<div class="result">❌ ERROR: ${error.message}</div>`;
+            }
+        }
+        
+        function testStatus() {
+            testProxy('ml-status.php');
+        }
+        
+        function testPrediction() {
+            testProxy('ml-prediction.php', 'symbol=BTC-USD');
+        }
+        
+        function testSentiment() {
+            testProxy('ml-sentiment.php', 'symbol=BTC-USD');
+        }
+    </script>
+</body>
+</html>
