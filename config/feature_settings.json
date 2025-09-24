@@ -1,0 +1,14 @@
+{
+    "smart_alerts": {
+        "enabled": true,
+        "usage": "low"
+    },
+    "real_time_streaming": {
+        "enabled": true,
+        "usage": "low"
+    },
+    "auto_trading": {
+        "enabled": true,
+        "usage": "low"
+    }
+}

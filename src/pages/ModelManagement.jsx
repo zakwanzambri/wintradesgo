@@ -127,12 +127,12 @@ const ModelManagementPage = () => {
       <div className="flex justify-between items-start mb-4">
         <div>
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-            {model.type.toUpperCase()} - {model.symbol}
+            {(model?.type || 'Unknown').toUpperCase()} - {model?.symbol || 'N/A'}
           </h3>
-          <p className="text-sm text-gray-600 dark:text-gray-300">Version {model.version}</p>
+          <p className="text-sm text-gray-600 dark:text-gray-300">Version {model?.version || '1.0.0'}</p>
         </div>
         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-          model.status === 'active' 
+          model?.status === 'active' 
             ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' 
             : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200'
         }`}>
@@ -141,19 +141,19 @@ const ModelManagementPage = () => {
       </div>
       
       <div className="space-y-2 mb-4">
-        {model.performance.accuracy && (
+        {model?.performance?.accuracy && (
           <div className="flex justify-between">
             <span className="text-sm text-gray-600 dark:text-gray-400">Accuracy:</span>
             <span className="text-sm font-medium text-gray-900 dark:text-white">{(model.performance.accuracy * 100).toFixed(1)}%</span>
           </div>
         )}
-        {model.performance.sharpe && (
+        {model?.performance?.sharpe && (
           <div className="flex justify-between">
             <span className="text-sm text-gray-600 dark:text-gray-400">Sharpe Ratio:</span>
             <span className="text-sm font-medium text-gray-900 dark:text-white">{model.performance.sharpe}</span>
           </div>
         )}
-        {model.performance.precision && (
+        {model?.performance?.precision && (
           <div className="flex justify-between">
             <span className="text-sm text-gray-600 dark:text-gray-400">Precision:</span>
             <span className="text-sm font-medium text-gray-900 dark:text-white">{(model.performance.precision * 100).toFixed(1)}%</span>
@@ -162,7 +162,7 @@ const ModelManagementPage = () => {
       </div>
       
       <div className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-        Last updated: {model.last_updated}
+        Last updated: {model?.last_updated || 'Unknown'}
       </div>
       
       <div className="flex space-x-2">
@@ -252,12 +252,7 @@ const ModelManagementPage = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      {/* Debug element to test if component is rendering */}
-      <div className="bg-red-500 text-white p-4 mb-4 rounded">
-        DEBUG: ModelManagement component is rendering! Active tab: {activeTab}
-      </div>
-      
+    <div className="max-w-7xl mx-auto px-4 py-8">      
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Model & Feature Management</h1>
         <p className="text-gray-600 dark:text-gray-300">Manage your trained ML models and advanced trading features</p>
@@ -324,7 +319,7 @@ const ModelManagementPage = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {models.map((model, index) => (
+              {models.filter(model => model && typeof model === 'object').map((model, index) => (
                 <ModelCard key={index} model={model} />
               ))}
             </div>
@@ -337,7 +332,7 @@ const ModelManagementPage = () => {
         <div>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Advanced Features</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {Object.entries(features).map(([key, data]) => (
+            {Object.entries(features).filter(([key, data]) => data && typeof data === 'object').map(([key, data]) => (
               <FeatureToggle
                 key={key}
                 featureKey={key}

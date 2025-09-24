@@ -151,16 +151,14 @@ function App() {
             <Route 
               path="/model-management" 
               element={
-                <ProtectedRoute>
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <ModelManagement />
-                  </motion.div>
-                </ProtectedRoute>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <ModelManagement />
+                </motion.div>
               } 
             />
           </Routes>
