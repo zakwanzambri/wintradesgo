@@ -26,7 +26,45 @@ const ModelManagementPage = () => {
   const loadModels = async () => {
     setLoading(true);
     try {
-      // In production, this would call your model manager API
+      const response = await fetch('http://localhost/wintradesgo/model-api.php?action=list_models');
+      const data = await response.json();
+      
+      if (data.success) {
+        setModels(data.models);
+      } else {
+        console.error('Failed to load models:', data.error);
+        // Fallback to mock data
+        const mockModels = [
+          {
+            type: 'lstm',
+            symbol: 'BTC-USD',
+            version: '2.1.0',
+            performance: { accuracy: 0.78, sharpe: 1.45 },
+            last_updated: '2025-09-20 14:30:00',
+            status: 'active'
+          },
+          {
+            type: 'lstm', 
+            symbol: 'ETH-USD',
+            version: '1.9.3',
+            performance: { accuracy: 0.72, sharpe: 1.28 },
+            last_updated: '2025-09-18 09:15:00',
+            status: 'active'
+          },
+          {
+            type: 'sentiment',
+            symbol: 'BTC-USD',
+            version: '3.0.1',
+            performance: { accuracy: 0.85, precision: 0.82 },
+            last_updated: '2025-09-22 16:45:00',
+            status: 'active'
+          }
+        ];
+        setModels(mockModels);
+      }
+    } catch (error) {
+      console.error('Network error loading models:', error);
+      // Fallback to mock data on network error
       const mockModels = [
         {
           type: 'lstm',
@@ -35,27 +73,9 @@ const ModelManagementPage = () => {
           performance: { accuracy: 0.78, sharpe: 1.45 },
           last_updated: '2025-09-20 14:30:00',
           status: 'active'
-        },
-        {
-          type: 'lstm', 
-          symbol: 'ETH-USD',
-          version: '1.9.3',
-          performance: { accuracy: 0.72, sharpe: 1.28 },
-          last_updated: '2025-09-18 09:15:00',
-          status: 'active'
-        },
-        {
-          type: 'sentiment',
-          symbol: 'BTC-USD',
-          version: '3.0.1',
-          performance: { accuracy: 0.85, precision: 0.82 },
-          last_updated: '2025-09-22 16:45:00',
-          status: 'active'
         }
       ];
       setModels(mockModels);
-    } catch (error) {
-      console.error('Failed to load models:', error);
     } finally {
       setLoading(false);
     }
@@ -63,7 +83,28 @@ const ModelManagementPage = () => {
 
   const loadFeatures = async () => {
     try {
-      // Mock feature data - in production, call advanced_features.php
+      const response = await fetch('http://localhost/wintradesgo/model-api.php?action=get_features');
+      const data = await response.json();
+      
+      if (data.success) {
+        setFeatures(data.features);
+      } else {
+        // Fallback to mock features
+        const mockFeatures = {
+          basic_predictions: { enabled: true, usage: 'high' },
+          advanced_sentiment: { enabled: true, usage: 'medium' },
+          portfolio_optimization: { enabled: true, usage: 'low' },
+          risk_management: { enabled: true, usage: 'high' },
+          smart_alerts: { enabled: false, usage: 'none' },
+          backtesting_pro: { enabled: true, usage: 'medium' },
+          real_time_streaming: { enabled: false, usage: 'none' },
+          auto_trading: { enabled: false, usage: 'none' }
+        };
+        setFeatures(mockFeatures);
+      }
+    } catch (error) {
+      console.error('Network error loading features:', error);
+      // Fallback to mock features on network error
       const mockFeatures = {
         basic_predictions: { enabled: true, usage: 'high' },
         advanced_sentiment: { enabled: true, usage: 'medium' },
@@ -75,8 +116,6 @@ const ModelManagementPage = () => {
         auto_trading: { enabled: false, usage: 'none' }
       };
       setFeatures(mockFeatures);
-    } catch (error) {
-      console.error('Failed to load features:', error);
     }
   };
 
@@ -177,13 +216,34 @@ const ModelManagementPage = () => {
   };
 
   const toggleFeature = async (featureKey, enabled) => {
+    // Optimistically update UI
     setFeatures(prev => ({
       ...prev,
       [featureKey]: { ...prev[featureKey], enabled }
     }));
     
-    // In production, call API to save feature settings
-    console.log(`${featureKey} ${enabled ? 'enabled' : 'disabled'}`);
+    try {
+      const response = await fetch(`http://localhost/wintradesgo/model-api.php?action=toggle_feature&feature=${featureKey}&enabled=${enabled ? 'true' : 'false'}`);
+      const data = await response.json();
+      
+      if (data.success) {
+        console.log(`Feature ${featureKey} ${enabled ? 'enabled' : 'disabled'} successfully`);
+      } else {
+        // Revert on error
+        setFeatures(prev => ({
+          ...prev,
+          [featureKey]: { ...prev[featureKey], enabled: !enabled }
+        }));
+        console.error('Failed to toggle feature:', data.error);
+      }
+    } catch (error) {
+      // Revert on network error
+      setFeatures(prev => ({
+        ...prev,
+        [featureKey]: { ...prev[featureKey], enabled: !enabled }
+      }));
+      console.error('Network error toggling feature:', error);
+    }
   };
 
   return (

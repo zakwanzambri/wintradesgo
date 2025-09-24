@@ -288,9 +288,10 @@ class AdvancedTradingFeatures {
     }
     
     private function calculateVaR($symbol, $position_size, $entry_price) {
-        // 95% VaR calculation (simplified)
+        // 95% VaR calculation (simplified) - assuming position_size is the dollar amount invested
         $volatility = $this->calculateVolatility($symbol);
-        return $position_size * $entry_price * $volatility * 1.65; // 95% confidence
+        $var = $position_size * $volatility * 1.65; // 95% confidence interval
+        return round($var, 2);
     }
     
     private function calculateVolatility($symbol) {
@@ -352,6 +353,16 @@ class AdvancedTradingFeatures {
             return "Position size appropriate, could increase by 10-20%";
         }
         return "Current position size is optimal";
+    }
+    
+    private function estimateMaxDrawdown($symbol, $mlPrediction) {
+        // Estimate max drawdown based on ML confidence and historical patterns
+        $confidence = $mlPrediction['confidence'];
+        $baseDrawdown = 0.15; // 15% base drawdown
+        
+        // Lower confidence = higher potential drawdown
+        $adjustedDrawdown = $baseDrawdown * (2 - $confidence);
+        return round($adjustedDrawdown * 100, 2); // Return as percentage
     }
 }
 

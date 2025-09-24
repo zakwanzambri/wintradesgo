@@ -331,15 +331,67 @@ class ModelManagementAPI {
             $portfolio = json_decode($portfolio, true);
         }
         
-        $riskAssessment = $this->advancedFeatures->assessRisk($portfolio, intval($timeframe));
+        $riskAssessments = [];
+        $totalRisk = 0;
+        
+        // Assess risk for each position
+        foreach ($portfolio as $symbol => $amount) {
+            $position_size = floatval($amount);
+            $entry_price = $this->getCurrentPrice($symbol); // Mock current price
+            
+            $riskAssessment = $this->advancedFeatures->assessRisk($symbol, $position_size, $entry_price);
+            $riskAssessments[$symbol] = $riskAssessment;
+            
+            // Add to total portfolio risk
+            if (isset($riskAssessment['value_at_risk'])) {
+                $totalRisk += $riskAssessment['value_at_risk'];
+            }
+        }
         
         return [
             'success' => true,
-            'risk_assessment' => $riskAssessment,
+            'risk_assessment' => [
+                'individual_risks' => $riskAssessments,
+                'total_portfolio_var' => round($totalRisk, 2),
+                'risk_level' => $this->getRiskLevel($totalRisk),
+                'recommendations' => $this->getRiskRecommendations($totalRisk)
+            ],
             'portfolio' => $portfolio,
             'timeframe_days' => intval($timeframe),
             'timestamp' => date('Y-m-d H:i:s')
         ];
+    }
+    
+    private function getCurrentPrice($symbol) {
+        // Mock current prices - in production, get from real API
+        $prices = [
+            'BTC-USD' => 45000,
+            'ETH-USD' => 3000,
+            'ADA-USD' => 0.35,
+            'DOT-USD' => 7.50
+        ];
+        return $prices[$symbol] ?? 100;
+    }
+    
+    private function getRiskLevel($totalVar) {
+        if ($totalVar < 1000) return 'Low';
+        if ($totalVar < 5000) return 'Moderate';
+        if ($totalVar < 15000) return 'High';
+        return 'Very High';
+    }
+    
+    private function getRiskRecommendations($totalVar) {
+        $recommendations = [];
+        if ($totalVar > 10000) {
+            $recommendations[] = 'Consider diversifying your portfolio to reduce concentration risk';
+        }
+        if ($totalVar > 20000) {
+            $recommendations[] = 'Your portfolio has high risk - consider reducing position sizes';
+        }
+        if (empty($recommendations)) {
+            $recommendations[] = 'Your portfolio risk level is acceptable';
+        }
+        return $recommendations;
     }
     
     private function createAlert() {
@@ -347,14 +399,26 @@ class ModelManagementAPI {
         
         if (!$alertData) {
             $alertData = [
-                'symbol' => $_POST['symbol'] ?? 'BTC-USD',
-                'condition' => $_POST['condition'] ?? 'price_above',
-                'value' => $_POST['value'] ?? 50000,
-                'message' => $_POST['message'] ?? 'Price alert triggered'
+                'type' => $_POST['type'] ?? $_GET['type'] ?? 'price',
+                'symbol' => $_POST['symbol'] ?? $_GET['symbol'] ?? 'BTC-USD',
+                'condition' => $_POST['condition'] ?? $_GET['condition'] ?? 'price_above',
+                'value' => $_POST['value'] ?? $_GET['value'] ?? 50000,
+                'message' => $_POST['message'] ?? $_GET['message'] ?? 'Price alert triggered'
             ];
         }
         
-        $alert = $this->advancedFeatures->createSmartAlert($alertData);
+        // Prepare conditions array
+        $conditions = [
+            'condition' => $alertData['condition'],
+            'value' => floatval($alertData['value']),
+            'message' => $alertData['message']
+        ];
+        
+        $alert = $this->advancedFeatures->createSmartAlert(
+            $alertData['type'], 
+            $alertData['symbol'], 
+            $conditions
+        );
         
         return [
             'success' => true,
