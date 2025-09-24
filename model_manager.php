@@ -1,15 +1,51 @@
 <?php
 /**
- * Model Manager - Load and use real trained ML models
+ * Model Manager - Load and use real trained ML models with feature toggle support
  */
+
+require_once '    /**
+     * Make predictions using ML models - with feature toggle checks
+     */
+    public function predict($modelType, $symbol, $inputData) {
+        // Check if basic predictions are enabled
+        if (!$this->featureManager->canUseBasicPredictions()) {
+            return $this->featureManager->getDisabledMessage('basic_predictions');
+        }
+        
+        // Check specific feature requirements
+        if ($modelType === 'sentiment' && !$this->featureManager->canUseAdvancedSentiment()) {
+            return $this->featureManager->getDisabledMessage('advanced_sentiment');
+        }
+        
+        // Log feature usage
+        $this->featureManager->logFeatureUsage('basic_predictions');
+        if ($modelType === 'sentiment') {
+            $this->featureManager->logFeatureUsage('advanced_sentiment');
+        }
+        
+        $model = $this->loadModel($modelType, $symbol);
+        
+        switch ($modelType) {
+            case 'lstm':
+                return $this->predictLSTM($model, $inputData);
+            case 'sentiment':
+                return $this->predictSentiment($model, $inputData);
+            case 'ensemble':
+                return $this->predictEnsemble($model, $inputData);
+            default:
+                throw new Exception("Unknown model type: {$modelType}");
+        }
+    }hp';
 
 class ModelManager {
     private $modelPath;
     private $loadedModels;
+    private $featureManager;
     
     public function __construct($modelPath = 'models/') {
         $this->modelPath = $modelPath;
         $this->loadedModels = [];
+        $this->featureManager = new FeatureManager();
         $this->initializeModelDirectory();
     }
     

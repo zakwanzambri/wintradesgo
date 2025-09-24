@@ -1,7 +1,7 @@
 {
     "smart_alerts": {
-        "enabled": true,
-        "usage": "low"
+        "enabled": false,
+        "usage": "none"
     },
     "real_time_streaming": {
         "enabled": true,
