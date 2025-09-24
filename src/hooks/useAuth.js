@@ -12,6 +12,20 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const initAuth = async () => {
       try {
+        // Development mode: Auto-login with test user
+        if (process.env.NODE_ENV === 'development') {
+          const testUser = {
+            id: 1,
+            username: 'testuser',
+            email: 'test@wintradesgo.com',
+            role: 'user'
+          };
+          setUser(testUser);
+          setIsAuthenticated(true);
+          setLoading(false);
+          return;
+        }
+
         const result = await authService.verifyToken();
         if (result.success) {
           setUser(result.user);
