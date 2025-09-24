@@ -1,0 +1,22 @@
+{
+    "type": "lstm",
+    "symbol": "ETH-USD",
+    "version": "1.0.0",
+    "trained_date": "2025-09-24 10:00:01",
+    "performance": {
+        "accuracy": 0.7669999999999999,
+        "precision": 0.6940000000000001,
+        "recall": 0.7000000000000001,
+        "f1_score": 0.865
+    },
+    "parameters": {
+        "learning_rate": 0.001,
+        "epochs": 100,
+        "batch_size": 32,
+        "layers": [
+            128,
+            64,
+            32
+        ]
+    }
+}

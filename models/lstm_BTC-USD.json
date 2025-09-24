@@ -1,0 +1,22 @@
+{
+    "type": "lstm",
+    "symbol": "BTC-USD",
+    "version": "1.0.0",
+    "trained_date": "2025-09-24 10:00:01",
+    "performance": {
+        "accuracy": 0.746,
+        "precision": 0.8380000000000001,
+        "recall": 0.81,
+        "f1_score": 0.836
+    },
+    "parameters": {
+        "learning_rate": 0.001,
+        "epochs": 100,
+        "batch_size": 32,
+        "layers": [
+            128,
+            64,
+            32
+        ]
+    }
+}

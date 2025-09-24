@@ -8,7 +8,7 @@
         "usage": "low"
     },
     "auto_trading": {
-        "enabled": true,
-        "usage": "low"
+        "enabled": false,
+        "usage": "none"
     }
 }
