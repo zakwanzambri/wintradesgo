@@ -21,6 +21,7 @@ const Header = () => {
     { path: '/', label: 'Home' },
     { path: '/dashboard', label: 'Dashboard' },
     { path: '/enhanced-dashboard', label: 'Enhanced AI' },
+    { path: '/model-management', label: '🧠 ML Models' },
     { path: '/portfolio', label: 'Portfolio' },
     { path: '/phase3-progress', label: '🚀 Phase 3 Progress' },
     { path: '/phase3-integration', label: '🔌 Integration Test' },
@@ -100,6 +101,13 @@ const Header = () => {
                         onClick={() => setUserMenuOpen(false)}
                       >
                         Portfolio
+                      </Link>
+                      <Link
+                        to="/model-management"
+                        className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        🧠 ML Models
                       </Link>
                       <button
                         onClick={handleLogout}
@@ -181,6 +189,13 @@ const Header = () => {
                       className="text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 font-medium px-3 py-2"
                     >
                       Portfolio
+                    </Link>
+                    <Link
+                      to="/model-management"
+                      onClick={() => setIsMenuOpen(false)}
+                      className="text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 font-medium px-3 py-2"
+                    >
+                      🧠 ML Models
                     </Link>
                     <button
                       onClick={() => {

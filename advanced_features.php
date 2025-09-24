@@ -1,0 +1,388 @@
+<?php
+/**
+ * Advanced Trading Features Manager
+ * Portfolio optimization, risk management, alerts, etc.
+ */
+
+class AdvancedTradingFeatures {
+    private $modelManager;
+    private $portfolioData;
+    private $riskSettings;
+    
+    public function __construct($modelManager = null) {
+        $this->modelManager = $modelManager ?: new ModelManager();
+        $this->portfolioData = [];
+        $this->riskSettings = $this->getDefaultRiskSettings();
+    }
+    
+    /**
+     * Portfolio Optimization using ML predictions
+     */
+    public function optimizePortfolio($symbols, $totalCapital = 10000) {
+        $predictions = [];
+        $risks = [];
+        
+        // Get ML predictions for each symbol
+        foreach ($symbols as $symbol) {
+            $prediction = $this->modelManager->predict('lstm', $symbol, $this->getMarketFeatures($symbol));
+            $predictions[$symbol] = $prediction;
+            $risks[$symbol] = $this->calculateRisk($symbol, $prediction);
+        }
+        
+        // Apply Modern Portfolio Theory with ML insights
+        $allocation = $this->calculateOptimalAllocation($predictions, $risks, $totalCapital);
+        
+        return [
+            'allocation' => $allocation,
+            'expected_return' => $this->calculateExpectedReturn($allocation, $predictions),
+            'portfolio_risk' => $this->calculatePortfolioRisk($allocation, $risks),
+            'sharpe_ratio' => $this->calculateSharpeRatio($allocation, $predictions, $risks),
+            'recommendations' => $this->generateRecommendations($allocation, $predictions),
+            'rebalance_frequency' => 'Weekly',
+            'timestamp' => date('Y-m-d H:i:s')
+        ];
+    }
+    
+    /**
+     * Advanced Risk Management
+     */
+    public function assessRisk($symbol, $position_size, $entry_price) {
+        // Get ML-based risk assessment
+        $mlPrediction = $this->modelManager->predict('lstm', $symbol, $this->getMarketFeatures($symbol));
+        
+        // Calculate various risk metrics
+        $var = $this->calculateVaR($symbol, $position_size, $entry_price);
+        $maxDrawdown = $this->estimateMaxDrawdown($symbol, $mlPrediction);
+        $volatility = $this->calculateVolatility($symbol);
+        
+        // ML-enhanced risk score
+        $mlRiskScore = $this->calculateMLRiskScore($mlPrediction, $volatility);
+        
+        return [
+            'overall_risk' => $this->categorizeRisk($mlRiskScore),
+            'risk_score' => $mlRiskScore,
+            'value_at_risk' => $var,
+            'max_drawdown_estimate' => $maxDrawdown,
+            'volatility' => $volatility,
+            'ml_confidence' => $mlPrediction['confidence'],
+            'recommended_stop_loss' => $entry_price * (1 - $this->riskSettings['max_loss_percent'] / 100),
+            'recommended_take_profit' => $entry_price * (1 + $this->riskSettings['min_profit_percent'] / 100),
+            'position_sizing_advice' => $this->getPositionSizingAdvice($mlRiskScore, $position_size),
+            'timestamp' => date('Y-m-d H:i:s')
+        ];
+    }
+    
+    /**
+     * Smart Alerts System
+     */
+    public function createSmartAlert($type, $symbol, $conditions) {
+        $alertId = uniqid('alert_');
+        
+        $alert = [
+            'id' => $alertId,
+            'type' => $type, // price, ml_prediction, risk, portfolio
+            'symbol' => $symbol,
+            'conditions' => $conditions,
+            'status' => 'active',
+            'created_at' => date('Y-m-d H:i:s'),
+            'last_checked' => null,
+            'triggered_count' => 0,
+            'ml_enhanced' => true
+        ];
+        
+        // Add ML enhancement based on alert type
+        switch ($type) {
+            case 'ml_prediction':
+                $alert['ml_config'] = [
+                    'confidence_threshold' => $conditions['min_confidence'] ?? 0.7,
+                    'prediction_type' => $conditions['prediction'] ?? 'BUY',
+                    'model_version' => 'latest',
+                    'check_frequency' => '15min'
+                ];
+                break;
+                
+            case 'smart_entry':
+                $alert['ml_config'] = [
+                    'entry_strategy' => 'ml_optimized',
+                    'risk_adjusted' => true,
+                    'sentiment_weight' => 0.3,
+                    'technical_weight' => 0.7
+                ];
+                break;
+                
+            case 'portfolio_rebalance':
+                $alert['ml_config'] = [
+                    'trigger_threshold' => 'deviation > 5%',
+                    'optimization_method' => 'ml_enhanced_mpt',
+                    'rebalance_frequency' => 'dynamic'
+                ];
+                break;
+        }
+        
+        $this->saveAlert($alert);
+        
+        return $alert;
+    }
+    
+    /**
+     * Advanced Market Analysis
+     */
+    public function analyzeMarketConditions($symbols) {
+        $analysis = [
+            'market_regime' => $this->detectMarketRegime($symbols),
+            'correlation_matrix' => $this->calculateCorrelationMatrix($symbols),
+            'volatility_clustering' => $this->detectVolatilityClustering($symbols),
+            'trend_strength' => $this->analyzeTrendStrength($symbols),
+            'ml_sentiment' => $this->getMLSentimentOverview($symbols),
+            'risk_level' => 'MODERATE',
+            'recommendations' => []
+        ];
+        
+        // Generate ML-based recommendations
+        $analysis['recommendations'] = $this->generateMarketRecommendations($analysis);
+        
+        return $analysis;
+    }
+    
+    /**
+     * Feature Toggle System
+     */
+    public function getAvailableFeatures() {
+        return [
+            'basic_predictions' => [
+                'name' => 'Basic ML Predictions',
+                'status' => 'active',
+                'description' => 'LSTM-based price predictions with confidence scores'
+            ],
+            'advanced_sentiment' => [
+                'name' => 'Advanced Sentiment Analysis',
+                'status' => 'active',  
+                'description' => 'Multi-source sentiment with NLP processing'
+            ],
+            'portfolio_optimization' => [
+                'name' => 'Portfolio Optimization',
+                'status' => 'active',
+                'description' => 'ML-enhanced Modern Portfolio Theory'
+            ],
+            'risk_management' => [
+                'name' => 'Advanced Risk Management',
+                'status' => 'active',
+                'description' => 'VaR, drawdown estimation, position sizing'
+            ],
+            'smart_alerts' => [
+                'name' => 'Smart Alert System',
+                'status' => 'active',
+                'description' => 'ML-triggered alerts and notifications'
+            ],
+            'backtesting_pro' => [
+                'name' => 'Professional Backtesting',
+                'status' => 'active',
+                'description' => 'Transaction costs, slippage, multiple strategies'
+            ],
+            'real_time_streaming' => [
+                'name' => 'Real-time Data Streaming',
+                'status' => 'beta',
+                'description' => 'Live market data with WebSocket connections'
+            ],
+            'auto_trading' => [
+                'name' => 'Automated Trading',
+                'status' => 'development',
+                'description' => 'Fully automated trading based on ML signals'
+            ]
+        ];
+    }
+    
+    // Helper methods
+    private function getMarketFeatures($symbol) {
+        // In production, fetch real market data
+        return [
+            'price_change' => rand(-50, 50) / 1000,
+            'volume_ratio' => rand(50, 200) / 100,
+            'rsi' => rand(30, 70),
+            'macd' => rand(-10, 10) / 100,
+            'bb_position' => rand(0, 100) / 100
+        ];
+    }
+    
+    private function calculateOptimalAllocation($predictions, $risks, $capital) {
+        // Simplified portfolio optimization
+        $totalScore = 0;
+        $scores = [];
+        
+        foreach ($predictions as $symbol => $pred) {
+            $score = $pred['prediction'] * $pred['confidence'] / $risks[$symbol];
+            $scores[$symbol] = $score;
+            $totalScore += $score;
+        }
+        
+        $allocation = [];
+        foreach ($scores as $symbol => $score) {
+            $percentage = ($score / $totalScore) * 100;
+            $allocation[$symbol] = [
+                'percentage' => round($percentage, 2),
+                'amount' => round(floatval($capital) * $percentage / 100, 2),
+                'confidence' => isset($predictions[$symbol]['confidence']) ? $predictions[$symbol]['confidence'] : 0.5,
+                'risk_score' => isset($risks[$symbol]) ? $risks[$symbol] : 0.5
+            ];
+        }
+        
+        return $allocation;
+    }
+    
+    private function calculateExpectedReturn($allocation, $predictions) {
+        $totalReturn = 0;
+        foreach ($allocation as $symbol => $data) {
+            $prediction = isset($predictions[$symbol]['prediction']) ? $predictions[$symbol]['prediction'] : 0.5;
+            $weight = $data['percentage'] / 100;
+            $expectedReturn = ($prediction - 0.5) * 0.2; // Convert to expected return percentage
+            $totalReturn += $weight * $expectedReturn;
+        }
+        return round($totalReturn * 100, 2); // Return as percentage
+    }
+    
+    private function calculatePortfolioRisk($allocation, $risks) {
+        $totalRisk = 0;
+        foreach ($allocation as $symbol => $data) {
+            $risk = isset($risks[$symbol]) ? $risks[$symbol] : 0.5;
+            $weight = $data['percentage'] / 100;
+            $totalRisk += $weight * $risk;
+        }
+        return round($totalRisk, 3);
+    }
+    
+    private function calculateSharpeRatio($allocation, $predictions, $risks) {
+        $expectedReturn = $this->calculateExpectedReturn($allocation, $predictions);
+        $portfolioRisk = $this->calculatePortfolioRisk($allocation, $risks);
+        $riskFreeRate = 2.0; // Assume 2% risk-free rate
+        
+        if ($portfolioRisk == 0) return 0;
+        return round(($expectedReturn - $riskFreeRate) / ($portfolioRisk * 100), 2);
+    }
+    
+    private function generateRecommendations($allocation, $predictions) {
+        $recommendations = [];
+        foreach ($allocation as $symbol => $data) {
+            $prediction = isset($predictions[$symbol]) ? $predictions[$symbol] : ['prediction' => 0.5];
+            if ($prediction['prediction'] > 0.7) {
+                $recommendations[] = "Strong BUY signal for {$symbol} - consider increasing allocation";
+            } elseif ($prediction['prediction'] < 0.3) {
+                $recommendations[] = "Consider reducing {$symbol} allocation due to bearish signals";
+            }
+        }
+        return empty($recommendations) ? ['Portfolio is well-balanced'] : $recommendations;
+    }
+    
+    private function calculateRisk($symbol, $prediction) {
+        // Simplified risk calculation
+        return (1 - $prediction['confidence']) * 0.5 + rand(10, 30) / 100;
+    }
+    
+    private function getDefaultRiskSettings() {
+        return [
+            'max_loss_percent' => 2.0,
+            'min_profit_percent' => 4.0,
+            'max_position_size' => 10.0,
+            'correlation_limit' => 0.7,
+            'volatility_threshold' => 0.3
+        ];
+    }
+    
+    private function calculateVaR($symbol, $position_size, $entry_price) {
+        // 95% VaR calculation (simplified)
+        $volatility = $this->calculateVolatility($symbol);
+        return $position_size * $entry_price * $volatility * 1.65; // 95% confidence
+    }
+    
+    private function calculateVolatility($symbol) {
+        // Simplified volatility calculation
+        return rand(15, 45) / 100; // 15-45% annualized volatility
+    }
+    
+    private function detectMarketRegime($symbols) {
+        // Simplified market regime detection
+        $regimes = ['BULL', 'BEAR', 'SIDEWAYS', 'VOLATILE'];
+        return $regimes[array_rand($regimes)];
+    }
+    
+    private function saveAlert($alert) {
+        // In production, save to database
+        $filename = 'alerts/' . $alert['id'] . '.json';
+        if (!is_dir('alerts')) mkdir('alerts', 0777, true);
+        file_put_contents($filename, json_encode($alert, JSON_PRETTY_PRINT));
+    }
+    
+    private function generateMarketRecommendations($analysis) {
+        $recommendations = [];
+        
+        switch ($analysis['market_regime']) {
+            case 'BULL':
+                $recommendations[] = 'Consider increasing equity exposure';
+                $recommendations[] = 'Focus on momentum strategies';
+                break;
+            case 'BEAR':
+                $recommendations[] = 'Reduce risk exposure';
+                $recommendations[] = 'Consider defensive positions';
+                break;
+            case 'SIDEWAYS':
+                $recommendations[] = 'Range trading strategies recommended';
+                $recommendations[] = 'Focus on mean reversion';
+                break;
+        }
+        
+        return $recommendations;
+    }
+    
+    private function categorizeRisk($score) {
+        if ($score < 0.3) return 'LOW';
+        if ($score < 0.6) return 'MODERATE';
+        if ($score < 0.8) return 'HIGH';
+        return 'EXTREME';
+    }
+    
+    private function calculateMLRiskScore($prediction, $volatility) {
+        return (1 - $prediction['confidence']) * $volatility;
+    }
+    
+    private function getPositionSizingAdvice($riskScore, $currentSize) {
+        if ($riskScore > 0.7) {
+            return "Reduce position size by 50% - high risk detected";
+        } elseif ($riskScore > 0.5) {
+            return "Consider reducing position size by 25%";
+        } elseif ($riskScore < 0.3) {
+            return "Position size appropriate, could increase by 10-20%";
+        }
+        return "Current position size is optimal";
+    }
+}
+
+// Example usage
+if (basename(__FILE__) == basename($_SERVER['SCRIPT_NAME'])) {
+    echo "<h1>🚀 Advanced Trading Features Test</h1>";
+    
+    $features = new AdvancedTradingFeatures();
+    
+    // Test portfolio optimization
+    echo "<h2>📊 Portfolio Optimization</h2>";
+    $symbols = ['BTC-USD', 'ETH-USD', 'AAPL'];
+    $portfolio = $features->optimizePortfolio($symbols, 10000);
+    echo "<pre>" . print_r($portfolio, true) . "</pre>";
+    
+    // Test risk assessment
+    echo "<h2>⚠️ Risk Assessment</h2>";
+    $risk = $features->assessRisk('BTC-USD', 1000, 50000);
+    echo "<pre>" . print_r($risk, true) . "</pre>";
+    
+    // Test available features
+    echo "<h2>🔧 Available Features</h2>";
+    $availableFeatures = $features->getAvailableFeatures();
+    echo "<pre>" . print_r($availableFeatures, true) . "</pre>";
+    
+    // Test smart alert
+    echo "<h2>🔔 Smart Alert Creation</h2>";
+    $alert = $features->createSmartAlert('ml_prediction', 'BTC-USD', [
+        'prediction' => 'BUY',
+        'min_confidence' => 0.75
+    ]);
+    echo "<pre>" . print_r($alert, true) . "</pre>";
+}
+?>

@@ -14,6 +14,7 @@ import AITest from './pages/AITest'
 import EnhancedDashboard from './pages/EnhancedDashboard'
 import Phase3Progress from './pages/Phase3Progress'
 import Phase3Integration from './pages/Phase3Integration'
+import ModelManagement from './pages/ModelManagement'
 import './index.css'
 
 function App() {
@@ -145,6 +146,21 @@ function App() {
                 >
                   <Phase3Integration />
                 </motion.div>
+              } 
+            />
+            <Route 
+              path="/model-management" 
+              element={
+                <ProtectedRoute>
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <ModelManagement />
+                  </motion.div>
+                </ProtectedRoute>
               } 
             />
           </Routes>
