@@ -1,14 +1,30 @@
 {
     "smart_alerts": {
-        "enabled": false,
-        "usage": "none"
+        "enabled": true,
+        "usage": "low"
     },
     "real_time_streaming": {
         "enabled": true,
         "usage": "low"
     },
     "auto_trading": {
-        "enabled": false,
-        "usage": "none"
+        "enabled": true,
+        "usage": "low"
+    },
+    "basic_predictions": {
+        "enabled": true,
+        "usage": "low"
+    },
+    "portfolio_optimization": {
+        "enabled": true,
+        "usage": "low"
+    },
+    "advanced_sentiment": {
+        "enabled": true,
+        "usage": "low"
+    },
+    "risk_management": {
+        "enabled": true,
+        "usage": "low"
     }
 }

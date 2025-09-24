@@ -1,0 +1,20 @@
+{
+    "id": "alert_68d3a80bc6424",
+    "type": "ml_prediction",
+    "symbol": "BTC-USD",
+    "conditions": {
+        "prediction": "BUY",
+        "min_confidence": 0.75
+    },
+    "status": "active",
+    "created_at": "2025-09-24 10:12:59",
+    "last_checked": null,
+    "triggered_count": 0,
+    "ml_enhanced": true,
+    "ml_config": {
+        "confidence_threshold": 0.75,
+        "prediction_type": "BUY",
+        "model_version": "latest",
+        "check_frequency": "15min"
+    }
+}

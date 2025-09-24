@@ -7,6 +7,9 @@ import PortfolioPerformanceTracker from '../utils/PortfolioPerformanceTracker.js
 import MLPatternRecognition from '../utils/MLPatternRecognition.js';
 import StrategyBuilder from '../utils/StrategyBuilder.js';
 import MLPredictionWidget from '../components/MLPredictionWidget.jsx';
+import FeatureDisabledNotice from '../components/FeatureDisabledNotice.jsx';
+import AdminInterface from '../components/AdminInterface.jsx';
+import { useFeatureToggles } from '../hooks/useFeatureToggles.js';
 
 const Dashboard = () => {
   const [viewMode, setViewMode] = useState("overview");
@@ -31,6 +34,9 @@ const Dashboard = () => {
   const [priceError, setPriceError] = useState(null);
   const [wsConnected, setWsConnected] = useState(false);
   const [wsConnections, setWsConnections] = useState({});
+  
+  // Feature toggles hook
+  const { isFeatureEnabled, loading: featuresLoading } = useFeatureToggles();
 
   // Initialize all Phase 2 systems
   const aiEngine = React.useMemo(() => new AITradingSignals(), []);
@@ -660,39 +666,72 @@ const Dashboard = () => {
     };
   }, []);
 
-  const tabs = [
-    { id: "overview", label: "Overview", icon: "📊" },
-    { id: "signals", label: "AI Signals", icon: "🤖" },
-    { id: "portfolio", label: "Portfolio", icon: "💼" },
-    { id: "patterns", label: "Patterns", icon: "🔍" },
-    { id: "backtest", label: "Backtesting", icon: "📈" },
-    { id: "paper", label: "Paper Trading", icon: "📝" },
-    { id: "alerts", label: "Alerts", icon: "🔔" },
-    { id: "strategies", label: "Strategies", icon: "⚡" },
-    { id: "performance", label: "Performance", icon: "📊" }
+  // Define all possible tabs with their feature requirements
+  const allTabs = [
+    { id: "overview", label: "Overview", icon: "📊", feature: null }, // Always available
+    { id: "signals", label: "AI Signals", icon: "🤖", feature: "basic_predictions" },
+    { id: "portfolio", label: "Portfolio", icon: "💼", feature: "portfolio_optimization" },
+    { id: "patterns", label: "Patterns", icon: "🔍", feature: "basic_predictions" },
+    { id: "backtest", label: "Backtesting", icon: "📈", feature: "backtesting_pro" },
+    { id: "paper", label: "Paper Trading", icon: "📝", feature: null }, // Always available
+    { id: "alerts", label: "Alerts", icon: "🔔", feature: "smart_alerts" },
+    { id: "strategies", label: "Strategies", icon: "⚡", feature: null }, // Always available
+    { id: "performance", label: "Performance", icon: "📊", feature: "portfolio_optimization" },
+    { id: "admin", label: "Admin", icon: "⚙️", feature: null } // Always available for feature management
   ];
+
+  // Filter tabs based on feature toggles
+  const tabs = allTabs.filter(tab => {
+    if (!tab.feature) return true; // Always show tabs that don't require features
+    return isFeatureEnabled(tab.feature);
+  });
+
+  // Redirect to available tab if current tab is disabled
+  useEffect(() => {
+    if (!featuresLoading && tabs.length > 0) {
+      const currentTabAvailable = tabs.some(tab => tab.id === viewMode);
+      if (!currentTabAvailable) {
+        setViewMode('overview'); // Default to overview if current tab is disabled
+      }
+    }
+  }, [viewMode, tabs, featuresLoading]);
 
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white border-b shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-6">
           <h1 className="text-3xl font-bold text-gray-900 mb-6">🚀 Unified Trading Dashboard - Phase 2</h1>
-          <div className="flex flex-wrap gap-2">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setViewMode(tab.id)}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
-                  viewMode === tab.id 
-                    ? "bg-blue-600 text-white shadow-sm" 
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                }`}
-              >
-                <span>{tab.icon}</span>
-                {tab.label}
-              </button>
-            ))}
-          </div>
+          
+          {featuresLoading ? (
+            <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="animate-spin h-5 w-5 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+              <span className="text-blue-800 font-medium">Loading feature settings...</span>
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setViewMode(tab.id)}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
+                    viewMode === tab.id 
+                      ? "bg-blue-600 text-white shadow-sm" 
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                >
+                  <span>{tab.icon}</span>
+                  {tab.label}
+                </button>
+              ))}
+              
+              {allTabs.length > tabs.length && (
+                <div className="px-4 py-2 rounded-lg bg-gray-50 border border-gray-200 text-gray-500 text-sm flex items-center gap-2">
+                  <span>🔒</span>
+                  {allTabs.length - tabs.length} features disabled
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -1915,6 +1954,33 @@ const Dashboard = () => {
             </div>
           </>
         )}
+
+        {/* Admin Section */}
+        {viewMode === 'admin' && (
+          <AdminInterface />
+        )}
+        
+        {/* Feature Disabled Fallback - Show when user tries to access disabled feature */}
+        {!featuresLoading && (() => {
+          const currentTab = allTabs.find(tab => tab.id === viewMode);
+          if (currentTab && currentTab.feature && !isFeatureEnabled(currentTab.feature)) {
+            const featureDisplayNames = {
+              basic_predictions: 'AI Predictions & Signals',
+              portfolio_optimization: 'Portfolio Optimization',
+              backtesting_pro: 'Professional Backtesting',
+              smart_alerts: 'Smart Alert System'
+            };
+            
+            return (
+              <FeatureDisabledNotice 
+                featureName={currentTab.feature}
+                featureDisplayName={featureDisplayNames[currentTab.feature] || currentTab.label}
+                managementLink="/model-management" 
+              />
+            );
+          }
+          return null;
+        })()}
       </div>
     </div>
   );

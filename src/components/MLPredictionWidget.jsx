@@ -9,14 +9,29 @@ const MLPredictionWidget = () => {
   const [error, setError] = useState(null);
 
   const callMLAPI = async (endpoint, params = {}) => {
-    const queryParams = new URLSearchParams(params).toString();
-    const url = `/api/proxy/ml-${endpoint}-clean.php${queryParams ? '?' + queryParams : ''}`;
-    
-    const response = await fetch(url);
-    const data = await response.json();
-    
-    if (!data.success) {
-      throw new Error(data.error || 'API call failed');
+    try {
+      const queryParams = new URLSearchParams(params).toString();
+      const url = `http://localhost/wintradesgo/model-api.php?action=${endpoint}${queryParams ? '&' + queryParams : ''}`;
+      
+      console.log('Calling API:', url);
+      const response = await fetch(url);
+      const text = await response.text();
+      console.log('Raw response:', text.substring(0, 200));
+      
+      // Check if response is JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        console.warn('Content-Type:', contentType);
+        console.warn('Response preview:', text.substring(0, 300));
+      }
+      
+      const data = JSON.parse(text);
+      
+      // Return data regardless of success flag for debugging
+      return data;
+    } catch (error) {
+      console.error('ML API Error:', error);
+      throw error;
     }
     
     return data.data;
@@ -27,17 +42,35 @@ const MLPredictionWidget = () => {
     setError(null);
     
     try {
-      const [predictionData, sentimentData, statusData] = await Promise.all([
-        callMLAPI('prediction', { symbol }),
-        callMLAPI('sentiment', { symbol }),
-        callMLAPI('status')
-      ]);
+      // Start with just list_models to test basic connectivity
+      const modelsData = await callMLAPI('list_models');
+      console.log('Models data received:', modelsData);
       
-      setPredictions(predictionData);
-      setSentiment(sentimentData);
-      setSystemStatus(statusData);
+      if (modelsData && modelsData.models) {
+        setSystemStatus({
+          status: 'active',
+          models_count: modelsData.models.length,
+          last_updated: new Date().toISOString()
+        });
+        
+        // Set some mock predictions for now
+        setPredictions({
+          symbol: symbol,
+          prediction: 'HOLD',
+          confidence: 0.75,
+          price_target: '$50,000',
+          timeframe: '24h'
+        });
+        
+        setSentiment({
+          sentiment: 'bullish',
+          confidence: 0.75,
+          sources: ['news', 'social_media']
+        });
+      }
     } catch (err) {
       setError(err.message);
+      console.error('ML Widget Error:', err);
     } finally {
       setLoading(false);
     }
